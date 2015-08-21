@@ -1,0 +1,312 @@
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:400,700);
+
+body {
+  font-family: Open Sans, Arial;
+  font-weight: 400;
+}
+
+h1 {
+  padding: 10px;
+  margin: 0 0 0 5px;
+  font-size: 26px;
+  text-overflow: ellipsis;
+  width: calc(100% - 20px);
+  overflow: hidden;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+h3 {
+  margin: 4px 6px 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 0;
+}
+
+h3.invited {
+  display: none;
+}
+
+#login {
+  width: 300px;
+  height: 100px;
+  position: absolute;
+  left: calc(50% - 150px);
+  top: 100px;
+}
+
+#login input {
+  width: 90%;
+  margin: 0 5% 0 5%;
+  font-size: 25px;
+  padding: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+#login-button {
+  width: 90%;
+  margin: 10px 5%;
+  font-size: 25px;
+  background: #DDFFEE;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+#channel-search {
+  width: 90%;
+  margin: 22px 5% 0 5%;
+  font-size: 22px;
+  padding: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+ul#search-results {
+  width: 287px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  padding: 6px;
+  position: absolute;
+  top: 34px;
+  left: 17px;
+  z-index: 2;
+  background: white;
+  max-height: 300px;
+  display: none;
+  overflow-y: auto;
+}
+
+#sidebar {
+  height: 100%;
+  width: 335px;
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: none;
+  z-index: 1;
+}
+
+#channels-list {
+  width: 335px;
+  height: calc(100% - 200px);
+  border: 2px solid #336699;
+  overflow-y: auto;
+  margin-top: 30px;
+}
+
+#channels-list ul {
+  list-style: none;
+  line-height: 24px;
+  font-size: 18px;
+  margin: 0;
+  padding: 0;
+}
+
+#channels li {
+  padding: 5px 10px 5px 10px;
+  cursor: pointer;
+  position: relative;
+}
+
+#channels li:nth-child(even) {
+  background: #EEF0FF;
+}
+
+#channels li:hover {
+  background: #EEFFF0;
+} 
+
+#channels-list li label {
+  overflow: hidden;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: calc(100% - 40px);
+  display: inline-block;
+}
+
+#channels-list button.leave, #channels-list button.decline {
+  width: 26px;
+  height: 20px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+h1#channel-name {
+  display: inline;
+  width: calc(100% - 220px);
+}
+
+#new-channel {
+  margin-top: 50px;
+  display: none;
+}
+
+#new-channel input, #new-channel label {
+  font-size: 16px;
+}
+
+#new-channel input[type="text"] {
+  width: 90%;
+  margin: 10px 5% 0 5%;
+  padding: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+#new-channel-create {
+  margin-top: 50px;
+}
+
+#new-channel-is-private {
+  margin: 10px 2% 0 5%;
+}
+
+button.big {
+  width: 90%;
+  margin: 5px 5%;
+  font-size: 25px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+#channel {
+  width: calc(100% - 400px);
+  display: inline-block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: none;
+}
+
+#channel #delete-button {
+  display: inline-block;
+  width: 200px;
+  margin: 5px;
+  font-size: 25px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+#channel ul#messages {
+  height: calc(100% - 200px);
+  border: 2px solid #336699;
+  margin: 0 0 20px 0;
+  padding: 0;
+  list-style: none;
+  line-height: 24px;
+  font-size: 18px;
+  overflow: auto;
+  display: inline-block;
+  width: calc(100% - 220px);
+}
+
+#channel ul#messages li {
+  padding: 5px 0 5px 10px;
+}
+
+#channel ul#messages li:nth-child(even) {
+  background: #EEF0FF;
+}
+
+#channel #new-message {
+  width: calc(100% - 100px);
+  height: 50px;
+}
+
+#channel #new-message-button {
+  height: 50px;
+  vertical-align: top;
+  font-size: 11px;
+  width: 90px;
+}
+
+#channel #members {
+  width: 200px;
+  display: inline-block;
+  height: calc(100% - 200px);
+  border: 2px solid #336699;
+  line-height: 24px;
+  font-size: 18px;
+  overflow: auto;
+  margin: 0 0 20px 0;
+}
+
+#channel #members ul {
+  list-style: none;
+  height: calc(100% - 100px);
+  overflow: auto;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+#channel #members li {
+  padding: 5px 0 5px 10px;
+  position: relative;
+}
+
+#channel #members li:nth-child(even) {
+  background: #EEF0FF;
+}
+
+#channel #members li label {
+  overflow: hidden;
+  cursor: pointer;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: calc(100% - 40px);
+  display: inline-block;
+}
+
+#channel #members button.kick {
+  width: 26px;
+  height: 20px;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+#channel #members #invite-name {
+  width: 90%;
+  margin: 10px 5% 0 5%;
+  font-size: 22px;
+  padding: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+}
+
+#channel #members #invite-button {
+  width: 44%;
+  margin: 5px 0 5px 4%;
+  font-size: 25px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  display: inline-block;
+}
+
+#channel #members #add-button {
+  width: 45%;
+  margin: 5px 4% 5px 0;
+  font-size: 25px;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  display: inline-block;
+}
+
+h2#channel-desc {
+  height: 26px;
+  padding: 10px;
+  margin: 0;
+  color: #777;
+  font-size: 24px;
+  line-height: 26px;
+}

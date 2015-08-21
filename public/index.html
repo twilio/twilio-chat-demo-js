@@ -1,0 +1,60 @@
+<html>
+
+<head>
+  <title>IP Messaging Test</title>
+  <link href="/css/index.css" rel="stylesheet" type="text/css" />
+  <script src="https://code.jquery.com/jquery-2.1.4.js"></script>
+  <script src="/js/vendor/fingerprint2.js"></script>
+  <script src="/js/vendor/superagent.js"></script>
+  <script src="/js/tokenprovider.js"></script>
+  <script src="https://media.twiliocdn.com/sdk/rtc/js/latest/twilio-rtc-ipmessaging.min.js"></script>
+  <script src="/js/index.js"></script>
+</head>
+
+<body>
+  <div id="content">
+    <div id="sidebar">
+      <div id="channels">
+        <input type="input" placeholder="Search" id="channel-search" />
+        <ul id="search-results"></ul>
+        <div id="channels-list">
+          <h3 class="invited">Pending Invites</h3>
+          <ul id="invited-list"></ul>
+          <h3 class="joined">My Channels</h3>
+          <ul id="joined-list"></ul>
+        </div>
+        <button id="new-channel-button" class="big">New Channel</button>
+      </div>
+      <div id="new-channel">
+        <h3 class="joined">Create New Channel</h3>
+        <input type="text" placeholder="Channel Name" id="new-channel-name" />
+        <input type="text" placeholder="Channel Description" id="new-channel-desc" />
+        <input type="checkbox" id="new-channel-is-private" /><label>Private</label>
+        <button id="new-channel-create" class="big">Create Channel</button>
+        <button id="new-channel-cancel" class="big">Cancel</button>
+      </div>
+    </div>
+
+    <div id="login">
+      <input type="text" placeholder="Identity" />
+      <button id="login-button">Log In</button>
+    </div>
+
+    <div id="channel">
+      <button id="delete-button">Delete Channel</button>
+      <h1 id="channel-name">Not in a Channel</h1>
+      <h2 id="channel-desc"></h2>
+      <ul id="messages"></ul>
+      <div id="members">
+        <ul></ul>
+        <input type="text" id="invite-name"/>
+        <button id="invite-button">Invite</button>
+        <button id="add-button">Add</button>
+      </div>
+      <textarea id="new-message"></textarea>
+      <button id="new-message-button">Send Message</button>
+    </div>
+  </div>
+</body>
+
+</html>
