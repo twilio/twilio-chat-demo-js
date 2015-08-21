@@ -1,0 +1,23 @@
+{
+  "name": "ip-demo-js",
+  "version": "1.0.0",
+  "description": "Twilio JS IP Messaging SDK Demo",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/twilio/ip-demo-js"
+  },
+  "author": "Ryan Rowland<rrowland@twilio.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/twilio/ip-demo-js/issues"
+  },
+  "homepage": "https://github.com/twilio/ip-demo-js",
+  "dependencies": {
+    "express": "^4.13.3",
+    "twilio": "^2.3.0"
+  }
+}

@@ -8,10 +8,16 @@ twilio-ip-messaging-js
 1. Copy `credentials.example.json` to `credentials.json`
 2. Plug your credentials into `credentials.json`
 
+##### Install dependencies
+
+```
+$ npm install
+```
+
 ##### Run server
 
 ```
-$ node server.js
+$ npm start
 ```
 
 ##### Connect
