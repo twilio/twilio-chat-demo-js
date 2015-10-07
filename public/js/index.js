@@ -16,6 +16,57 @@ $(document).ready(function() {
       logIn(identity, result);
     });
   });
+
+  $('#login input').focus()
+    .on('keydown', function(e) { if (e.keyCode === 13) { $('#login-button').click(); } });
+
+  $('#new-message').on('keydown', function(e) {
+    if (e.keyCode === 13) {
+      e.preventDefault();
+      $('#new-message-button').click();
+    }
+  });
+
+  var $messages = $('#messages');
+  var isLoading = false;
+
+  function stopLoading() { isLoading = false; }
+
+  $messages.on('scroll', throttle(function(e) {
+    if (isLoading) { return; }
+
+    var scrollTop = $messages.scrollTop();
+
+    if (scrollTop < 30) {
+      // (Historic mode) Load more if we're at the top of the message box
+      isLoading = true;
+      activeChannel.enablePruning();
+      activeChannel.getMoreMessages().then(function(messages) {
+        if (!messages.length) { return };
+
+        var oldHeight = $('#messages ul').height();
+        messages.reverse().forEach(addHistoricalMessage);
+        $messages.scrollTop($('#messages ul').height() - oldHeight);
+      }).then(stopLoading, stopLoading);
+    } else if (scrollTop > $('#messages ul').height() - $messages.height() - 10) {
+      // (Live mode) Enable pruning if we hit the bottom of the message box
+      if (activeChannel.pruningEnabled) { return; }
+
+      isLoading = true;
+      activeChannel.enablePruning();
+      activeChannel.prune().then(function(messages) {
+        messages.forEach(removeMessage);
+      }).then(stopLoading, stopLoading);
+    } else {
+      // (Historic mode) Disable pruning if the user is scrolling through messages
+      activeChannel.disablePruning();
+    }
+  }, 500));
+
+  $('#new-channel input').on('keydown', function(e) {
+    if (e.keyCode === 13) { $('#new-channel-create').click(); }
+    else if (e.keyCode === 27) { $('#new-channel-cancel').click(); }
+  });
 });
 
 function logIn(identity, endpointId) {
@@ -27,9 +78,12 @@ function logIn(identity, endpointId) {
     $('#login').hide();
     $('#sidebar').show();
 
-    client = new Twilio.IPMessaging.Client(token);
+    client = new Twilio.IPMessaging.Client(token, {
+      maxMessages: 20,
+      logLevel: 'debug'
+    });
 
-    client.on('channelAdded', function(channel) {
+    function addChannel(channel) {
       allChannels.push(channel);
 
       switch (channel.status) {
@@ -40,28 +94,37 @@ function logIn(identity, endpointId) {
           addInvitedChannel(channel);
           break;
       }
-    });
+    }
 
-    client.on('channelJoined', addJoinedChannel);
-    client.on('channelInvited', addInvitedChannel);
+    client.getChannels().then(function (channels) {
+      channels
+        .filter(function(channel) { return !!channel.friendlyName; })
+        .forEach(addChannel);
 
-    client.on('channelDeleted', function(channel) {
-      for(var i = 0; i < allChannels.length; i++) {
-        if(allChannels[i].sid === channel.sid) {
-          allChannels.splice(i, 1);
-          break;
+      client.on('channelAdded', function(channel) {
+        allChannels.push(channel);
+      });
+      client.on('channelJoined', addJoinedChannel);
+      client.on('channelInvited', addInvitedChannel);
+
+      client.on('channelRemoved', function(channel) {
+        for(var i = 0; i < allChannels.length; i++) {
+          if(allChannels[i].sid === channel.sid) {
+            allChannels.splice(i, 1);
+            break;
+          }
         }
-      }
 
-      $('#joined-list li[data-sid=' + channel.sid + ']').remove();
-    });
+        $('#joined-list li[data-sid=' + channel.sid + ']').remove();
+      });
 
-    client.on('channelLeft', function(channel) {
-      $('#joined-list li[data-sid=' + channel.sid + ']').remove();
+      client.on('channelLeft', function(channel) {
+        $('#joined-list li[data-sid=' + channel.sid + ']').remove();
 
-      if(channel === activeChannel) {
-        clearActiveChannel();
-      }
+        if(channel === activeChannel) {
+          clearActiveChannel();
+        }
+      });
     });
   });
 
@@ -73,6 +136,7 @@ function logIn(identity, endpointId) {
   $('#new-channel-button').on('click', function() {
     $('#channels').hide();
     $('#new-channel').show();
+    $('#new-channel-name').focus();
   });
 
   $('#new-channel-create').on('click', function() {
@@ -164,7 +228,7 @@ function addInvitedChannel(channel) {
   });
 
   $li.on('click', function enterChannel() {
-    channel.join().then(removeInvitedChannel).then(addJoinedChannel).then(setActiveChannel);
+    channel.join().then(removeInvitedChannel).then(setActiveChannel);
   });
 
   channel.on('updated', function() {
@@ -185,12 +249,13 @@ function removeInvitedChannel(channel) {
 }
 
 function clearActiveChannel() {
-  $('ul#messages').empty();
+  $('#messages ul').empty();
   $('#members ul').empty();
   $('#channel').hide();
 
   if(activeChannel) {
     activeChannel.removeListener('messageAdded', addMessage);
+    activeChannel.removeListener('messagePruned', removeMessage);
     activeChannel.removeListener('memberJoined', addMember);
     activeChannel.removeListener('memberLeft', removeMember);
     activeChannel.removeListener('updated', updateActiveChannel);
@@ -204,17 +269,21 @@ function setActiveChannel(channel) {
   $('h2#channel-desc').text(channel.attributes && channel.attributes.description || '');
   $('#channel').show();
 
+  $('#new-message').focus();
+
   channel.on('messageAdded', addMessage);
+  channel.on('messagePruned', removeMessage);
   channel.on('memberJoined', addMember);
   channel.on('memberLeft', removeMember);
   channel.on('updated', updateActiveChannel);
 
-  channel.fetchMembers().then(function(members) {
+  channel.getMembers().then(function(members) {
     members.forEach(addMember);
   });
 
-  channel.fetchMessages(1000).then(function(messages) {
+  channel.getMessages().then(function(messages) {
     messages.forEach(addMessage);
+    $('#messages').scrollTop($('#messages ul').height());
   });
 
   $('h1#channel-name').off('click');
@@ -290,10 +359,24 @@ function setActiveChannel(channel) {
 }
 
 function addMessage(message) {
-  var $messages = $('ul#messages');
-  var $li = $('<li/>').text(message.author + ': ' + message.body);
-  $messages.append($li);
-  $messages.scrollTop( $messages.height() );
+  var $messages = $('#messages');
+  var $ul = $('#messages ul');
+  var $li = $('<li/>').text(message.author + ': ' + message.body).attr('id', message.sid);
+  $ul.append($li);
+  if ($messages.scrollTop - $ul.height() < 30) {
+    $messages.scrollTop( $ul.height() );
+  }
+}
+
+function addHistoricalMessage(message) {
+  var $messages = $('#messages');
+  var $ul = $('#messages ul');
+  var $li = $('<li/>').text(message.author + ': ' + message.body).attr('id', message.sid);
+  $ul.prepend($li);
+}
+
+function removeMessage(message) {
+  $('#messages ul #' + message.sid).remove();
 }
 
 function addMember(member) {
@@ -323,3 +406,25 @@ function updateActiveChannel(channel) {
   $('h2#channel-desc').text(channel.attributes && channel.attributes.description);
 }
 
+function throttle(fn, threshhold, scope) {
+  threshhold || (threshhold = 250);
+  var last,
+      deferTimer;
+  return function () {
+    var context = scope || this;
+
+    var now = +new Date,
+        args = arguments;
+    if (last && now < last + threshhold) {
+      // hold on to it
+      clearTimeout(deferTimer);
+      deferTimer = setTimeout(function () {
+        last = now;
+        fn.apply(context, args);
+      }, threshhold);
+    } else {
+      last = now;
+      fn.apply(context, args);
+    }
+  };
+}

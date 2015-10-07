@@ -194,24 +194,29 @@ button.big {
   border-radius: 5px;
 }
 
-#channel ul#messages {
+#channel #messages {
   height: calc(100% - 200px);
   border: 2px solid #336699;
+  overflow: auto;
+  display: inline-block;
+  width: calc(100% - 220px);
   margin: 0 0 20px 0;
+  padding: 0;
+}
+
+#channel #messages ul {
+  margin: 0;
   padding: 0;
   list-style: none;
   line-height: 24px;
   font-size: 18px;
-  overflow: auto;
-  display: inline-block;
-  width: calc(100% - 220px);
 }
 
-#channel ul#messages li {
+#channel #messages li {
   padding: 5px 0 5px 10px;
 }
 
-#channel ul#messages li:nth-child(even) {
+#channel #messages li:nth-child(even) {
   background: #EEF0FF;
 }
 
