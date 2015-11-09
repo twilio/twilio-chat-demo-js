@@ -2,6 +2,7 @@
 
 var activeChannel = null;
 var allChannels = [];
+var areTyping = new Set();
 var client = null;
 var fingerprint = new Fingerprint2();
 var password = '8RqK2t9v1MP29WO';
@@ -32,7 +33,7 @@ $(document).ready(function() {
 
   function stopLoading() { isLoading = false; }
 
-  $messages.on('scroll', throttle(function(e) {
+  /* $messages.on('scroll', throttle(function(e) {
     if (isLoading) { return; }
 
     var scrollTop = $messages.scrollTop();
@@ -61,7 +62,7 @@ $(document).ready(function() {
       // (Historic mode) Disable pruning if the user is scrolling through messages
       activeChannel.disablePruning();
     }
-  }, 500));
+  }, 500)); */
 
   $('#new-channel input').on('keydown', function(e) {
     if (e.keyCode === 13) { $('#new-channel-create').click(); }
@@ -78,10 +79,7 @@ function logIn(identity, endpointId) {
     $('#login').hide();
     $('#sidebar').show();
 
-    client = new Twilio.IPMessaging.Client(token, {
-      maxMessages: 20,
-      logLevel: 'debug'
-    });
+    client = new Twilio.IPMessaging.Client(token, { maxMessages: 20 });
 
     function addChannel(channel) {
       allChannels.push(channel);
@@ -102,6 +100,7 @@ function logIn(identity, endpointId) {
         .forEach(addChannel);
 
       client.on('channelAdded', function(channel) {
+        console.info('added');
         allChannels.push(channel);
       });
       client.on('channelJoined', addJoinedChannel);
@@ -253,11 +252,15 @@ function clearActiveChannel() {
   $('#members ul').empty();
   $('#channel').hide();
 
+  areTyping = new Set();
+
   if(activeChannel) {
     activeChannel.removeListener('messageAdded', addMessage);
     activeChannel.removeListener('messagePruned', removeMessage);
     activeChannel.removeListener('memberJoined', addMember);
     activeChannel.removeListener('memberLeft', removeMember);
+    activeChannel.removeListener('typingStarted', typingStarted);
+    activeChannel.removeListener('typingEnded', typingEnded);
     activeChannel.removeListener('updated', updateActiveChannel);
   }
 }
@@ -277,9 +280,10 @@ function setActiveChannel(channel) {
   channel.on('memberLeft', removeMember);
   channel.on('updated', updateActiveChannel);
 
-  channel.getMembers().then(function(members) {
-    members.forEach(addMember);
-  });
+  channel.on('typingStarted', typingStarted);
+  channel.on('typingEnded', typingEnded);
+
+  channel.members.forEach(addMember);
 
   channel.getMessages().then(function(messages) {
     messages.forEach(addMessage);
@@ -324,6 +328,10 @@ function setActiveChannel(channel) {
     $input.on('blur', function() {
       $('h2#channel-desc').text(activeChannel.attributes.desc);
     });
+  });
+
+  $('#new-message').on('keydown', function(e) {
+    if (e.keyCode !== 13) { activeChannel.typing(); }
   });
 
   $('#new-message-button').off('click');
@@ -404,6 +412,34 @@ function removeMember(member) {
 function updateActiveChannel(channel) {
   $('h1#channel-name').text(channel.friendlyName);
   $('h2#channel-desc').text(channel.attributes && channel.attributes.description);
+}
+
+function typingStarted(member) {
+  areTyping.add(member.identity);
+  showTyping();
+}
+
+function typingEnded(member) {
+  areTyping.delete(member.identity);
+  showTyping();
+}
+
+function showTyping() {
+  var names = [];
+  areTyping.forEach(function(name) {
+    names.push(name);
+  });
+
+  var typingText = '';
+  if (!names.length) {
+    typingText = '';
+  } else if (names.length === 1) {
+    typingText = names[0] + ' is typing.';
+  } else {
+    typingText = names.join(', ') + ' are typing.';
+  }
+
+  $('span#typing').text(typingText);
 }
 
 function throttle(fn, threshhold, scope) {
