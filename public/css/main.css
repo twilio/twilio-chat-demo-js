@@ -226,7 +226,7 @@ body {
 
 #channel.view-only div.edit-button,
 #channel.view-only div.remove-button,
-#channel.view-only #delete-channel,
+#channel.view-only #channel-info button,
 #channel.view-only #channel-members,
 #channel.view-only #channel-message-send,
 #channel.view-only #typing-indicator {

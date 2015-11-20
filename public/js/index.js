@@ -29,7 +29,7 @@ $(document).ready(function() {
     $('#update-channel-display-name').val(activeChannel.friendlyName || '');
     $('#update-channel-unique-name').val(activeChannel.uniqueName || '');
     $('#update-channel-desc').val(activeChannel.attributes.description || '');
-    //$('#update-channel-private').prop('checked', activeChannel.isPrivate);
+    $('#update-channel-private').prop('checked', activeChannel.isPrivate);
     $('#update-channel').show();
     $('#overlay').show();
   });
@@ -116,9 +116,10 @@ $(document).ready(function() {
     }).then(setActiveChannel);
   });
 
-  $('#edit-channel').on('click', function() {
+  $('#update-channel-submit').on('click', function() {
     var desc = $('#update-channel-desc').val();
     var friendlyName = $('#update-channel-display-name').val();
+    var uniqueName = $('#update-channel-unique-name').val();
 
     var promises = [];
     if (desc !== activeChannel.attributes.description) {
@@ -127,6 +128,10 @@ $(document).ready(function() {
 
     if (friendlyName !== activeChannel.friendlyName) {
       promises.push(activeChannel.updateFriendlyName(friendlyName));
+    }
+
+    if (uniqueName !== activeChannel.uniqueName) {
+      promises.push(activeChannel.updateUniqueName(uniqueName));
     }
 
     Promise.all(promises).then(function() {
@@ -156,9 +161,17 @@ function logIn(identity, endpointId) {
     client.on('channelInvited', updateChannels);
     client.on('channelAdded', updateChannels);
     client.on('channelUpdated', updateChannels);
-    client.on('channelLeft', updateChannels);
-    client.on('channelRemoved', updateChannels);
+    client.on('channelLeft', leaveChannel);
+    client.on('channelRemoved', leaveChannel);
   });
+}
+
+function leaveChannel(channel) {
+  if (channel == activeChannel && channel.status !== 'joined') {
+    clearActiveChannel();
+  }
+
+  updateChannels();
 }
 
 function addKnownChannel(channel) {
@@ -374,11 +387,6 @@ function updateChannels() {
         break;
     }
   });
-  
-  var channel = activeChannel && client.channels.get(activeChannel.sid);
-  if (channel && channel.status !== 'joined') {
-    clearActiveChannel();
-  }
 }
 
 function setActiveChannel(channel) {
@@ -386,6 +394,7 @@ function setActiveChannel(channel) {
     activeChannel.removeListener('messageAdded', addMessage);
     activeChannel.removeListener('messageRemoved', removeMessage);
     activeChannel.removeListener('messageUpdated', updateMessage);
+    activeChannel.removeListener('updated', updateActiveChannel);
   }
   
   activeChannel = channel;
@@ -411,6 +420,8 @@ function setActiveChannel(channel) {
       $('#message-body-input').val('').focus();
     });
   });
+
+  activeChannel.on('updated', updateActiveChannel);
 
   channel.getMessages(messagesToLoad).then(function(messages) {
     messages.forEach(addMessage);
@@ -446,6 +457,11 @@ function setActiveChannel(channel) {
 function clearActiveChannel() {
   $('#channel').hide();
   $('#no-channel').show();
+}
+
+function updateActiveChannel() {
+  $('#channel-title').text(activeChannel.friendlyName);
+  $('#channel-desc').text(activeChannel.attributes.description);
 }
 
 function updateTypingIndicator() {
