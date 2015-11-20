@@ -199,8 +199,7 @@ function addInvitedChannel(channel) {
     .text(channel.friendlyName)
     .appendTo($el);
 
-  var $decline = $('<div/>')
-    .addClass('remove-button')
+  var $decline = $('<div class="remove-button glyphicon glyphicon-remove"/>')
     .on('click', function(e) {
       e.stopPropagation();
       channel.decline();
@@ -221,7 +220,7 @@ function addJoinedChannel(channel) {
     .appendTo($el);
 
   var $leave = $('<div/>')
-    .addClass('remove-button')
+  var $leave = $('<div class="remove-button glyphicon glyphicon-remove"/>')
     .on('click', function(e) {
       e.stopPropagation();
       channel.leave();
@@ -256,13 +255,13 @@ function updateMessage(message) {
 }
 
 function createMessage(message, $el) {
-  var $remove = $('<div class="remove-button"/>')
+  var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
     .on('click', function(e) {
       e.preventDefault();
       message.remove();
     }).appendTo($el);
 
-  var $edit = $('<div class="edit-button"/>')
+  var $edit = $('<div class="remove-button glyphicon glyphicon-edit"/>')
     .on('click', function(e) {
       e.preventDefault();
       $('.body', $el).hide();
@@ -339,7 +338,7 @@ function addMember(member) {
     .text(member.identity)
     .appendTo($el);
 
-  var $remove = $('<div class="remove-button"/>')
+  var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
     .on('click', member.remove.bind(member))
     .appendTo($el);
 

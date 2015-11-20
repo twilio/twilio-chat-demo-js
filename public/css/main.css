@@ -267,8 +267,6 @@ body {
 }
 
 div.remove-button {
-  background-image: url('http://adventureahead.cclc.com/images/shut.png');
-  background-size: 16px 16px;
   width: 16px;
   height: 16px;
   vertical-align: middle;
@@ -279,8 +277,6 @@ div.remove-button {
 }
 
 div.edit-button {
-  background-image: url('http://7dtdservers.com/img/iconmonstr-pencil-9-icon.png');
-  background-size: 16px 16px;
   width: 16px;
   height: 16px;
   vertical-align: middle;
