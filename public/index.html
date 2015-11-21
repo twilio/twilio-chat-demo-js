@@ -1,61 +1,103 @@
-<html>
-
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>IP Messaging Test</title>
-  <link href="/css/index.css" rel="stylesheet" type="text/css" />
-  <script src="https://code.jquery.com/jquery-2.1.4.js"></script>
-  <script src="/js/vendor/fingerprint2.js"></script>
-  <script src="/js/vendor/superagent.js"></script>
-  <script src="/js/tokenprovider.js"></script>
-  <script src="https://media.twiliocdn.com/sdk/rtc/js/ip-messaging/v0.7/twilio-ip-messaging.js"></script>
-  <script src="/js/index.js"></script>
+  <meta charset="UTF-8">
+  <title>Twilio Chat</title>
+
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"> 
+  <link rel="stylesheet" type="text/css" href="/css/main.css"> 
 </head>
-
 <body>
-  <div id="content">
-    <div id="sidebar">
-      <div id="channels">
-        <input type="input" placeholder="Search" id="channel-search" />
-        <ul id="search-results"></ul>
-        <div id="channels-list">
-          <h3 class="invited">Pending Invites</h3>
-          <ul id="invited-list"></ul>
-          <h3 class="joined">My Channels</h3>
-          <ul id="joined-list"></ul>
-        </div>
-        <button id="new-channel-button" class="big">New Channel</button>
-      </div>
-      <div id="new-channel">
-        <h3 class="joined">Create New Channel</h3>
-        <input type="text" placeholder="Channel Name" id="new-channel-name" />
-        <input type="text" placeholder="Channel Description" id="new-channel-desc" />
-        <input type="checkbox" id="new-channel-is-private" /><label>Private</label>
-        <button id="new-channel-create" class="big">Create Channel</button>
-        <button id="new-channel-cancel" class="big">Cancel</button>
-      </div>
+  <div id="login" class="popup">
+    <h3>Log In</h3>
+    <input id="login-name" placeholder="Identity"></input>
+    <button id="login-button" class="red-button">Log In</button>
+  </div>
+  <div id="add-member" class="popup">
+    <h3>Add User<div class="remove-button glyphicon glyphicon-remove"></div></h3>
+    <input id="add-identity" placeholder="Identity"></input>
+    <button id="add-button" class="red-button">Add</button>
+  </div>
+  <div id="invite-member" class="popup">
+    <h3>Invite User<div class="remove-button glyphicon glyphicon-remove"></div></h3>
+    <input id="invite-identity" placeholder="Identity"></input>
+    <button id="invite-button" class="red-button">Invite</button>
+  </div>
+  <div id="update-channel" class="popup">
+    <h3>Edit Channel<div class="remove-button glyphicon glyphicon-remove"></div></h3>
+    <input id="update-channel-display-name" placeholder="Display Name"/>
+    <input id="update-channel-unique-name" placeholder="Unique Name (Optional)"/>
+    <input id="update-channel-desc" placeholder="Description (Optional)"/>
+    <input disabled="true" type="checkbox" id="update-channel-private"/><label>Private Channel</label>
+    <button id="update-channel-submit" class="red-button">Update Channel</button>
+  </div>
+  <div id="create-channel" class="popup">
+    <h3>Create Channel<div class="remove-button glyphicon glyphicon-remove"></div></h3>
+    <input id="create-channel-display-name" placeholder="Display Name"/>
+    <input id="create-channel-unique-name" placeholder="Unique Name (Optional)"/>
+    <input id="create-channel-desc" placeholder="Description (Optional)"/>
+    <input type="checkbox" id="create-channel-private"/><label>Private Channel</label>
+    <button id="create-new-channel" class="red-button">Create Channel</button>
+  </div>
+  <div id="overlay"></div>
+  <div id="sidebar">
+    <div id="profile">
+      <span class="glyphicon glyphicon-user"></span>
+      <label></label>
     </div>
-
-    <div id="login">
-      <input type="text" placeholder="Identity" />
-      <button id="login-button">Log In</button>
-    </div>
-
-    <div id="channel">
-      <button id="delete-button">Delete Channel</button>
-      <h1 id="channel-name">Not in a Channel</h1>
-      <h2 id="channel-desc"></h2>
-      <div id="messages"><ul></ul></div>
-      <div id="members">
+    <div id="channels">
+      <div id="invited-channels">
         <ul></ul>
-        <input type="text" id="invite-name"/>
-        <button id="invite-button">Invite</button>
-        <button id="add-button">Add</button>
       </div>
-      <textarea id="new-message"></textarea>
-      <button id="new-message-button">Send Message</button>
-      <span id="typing"></span>
+      <div id="my-channels">
+        <ul></ul>
+      </div>
+      <div id="known-channels">
+        <ul></ul>
+      </div>
+      <div id="sidebar-footer">
+        <button id="create-channel-button" class="red-button">Create Channel</button>
+      </div>
     </div>
   </div>
-</body>
 
+  <div id="no-channel">
+    <p>You are not currently viewing a Channel.</p>
+  </div>
+
+  <div id="channel">
+    <div id="channel-info">
+      <h1 id="channel-title"></h1>
+      <h2 id="channel-desc"></h2>
+      <button id="edit-channel" class="white-button">Edit Channel</button>
+      <button id="delete-channel" class="red-button">Delete Channel</button>
+    </div>
+    <div id="channel-body">
+      <div id="channel-chat">
+        <div id="channel-messages"><ul></ul></div>
+        <div id="channel-message-send">
+          <div id="typing-indicator"><span></span></div>
+          <input type="textbox" id="message-body-input"></input>
+          <button id="send-message" class="red-button">Send</div>
+        </div>
+        <div id="channel-join-panel">
+          <button id="join-channel" class="red-button">Join this Channel</div>
+        </div>
+        <div id="channel-members">
+          <h3>Members</h3>
+          <button id="add-user" class="red-button">Add</button>
+          <button id="invite-user" class="red-button">Invite</button>
+          <ul></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-2.1.4.js"></script>
+  <script src="https://media.twiliocdn.com/sdk/rtc/js/ip-messaging/v0.8/twilio-ip-messaging.js"></script>
+  <script src="/js/vendor/fingerprint2.js"></script>
+  <script src="/js/vendor/superagent.js"></script>
+  <script type="text/javascript" src="/js/index.js"></script>
+</body>
 </html>
+

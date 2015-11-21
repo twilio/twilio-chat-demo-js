@@ -1,0 +1,552 @@
+@import url(https://fonts.googleapis.com/css?family=Open+Sans:400,600,700,300italic);
+
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: Open Sans, sans serif;
+}
+
+.popup {
+  position: absolute;
+  border-radius: 5px;
+  background: #F5F5F8;
+  z-index: 3;
+  box-shadow: 2px 4px 4px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  text-align: center;
+  display: none;
+}
+
+.popup h3 {
+  font-size: 16px;
+  margin: 0 0 20px 0;
+  font-weight: bold;
+  width: 100%;
+  height: 30px;
+  background: #333;
+  color: white;
+  padding: 6px 10px;
+}
+
+#create-channel, #update-channel {
+  top: calc(50% - 100px);
+  left: calc(50% - 160px);
+  width: 300px;
+  height: 220px;
+}
+
+#invite-member {
+  top: calc(50% - 48px);
+  left: calc(50% - 130px);
+  width: 260px;
+  height: 96px;
+}
+
+#add-member {
+  top: calc(50% - 48px);
+  left: calc(50% - 130px);
+  width: 260px;
+  height: 96px;
+}
+
+#create-channel input, #update-channel input {
+  display: block;
+  margin: 5px auto;
+  width: 250px;
+}
+
+#update-channel input[disabled='true'] {
+  background: #DDD;
+}
+
+#create-channel input[type='checkbox'], #update-channel input[type='checkbox'] {
+  width: auto;
+  margin: 10px;
+  display: inline;
+}
+
+#create-channel label, #update-channel label {
+  display: inline;
+}
+
+#create-channel button, #update-channel button {
+  display: block;
+  width: 90%;
+  margin: 10px auto 5px auto;
+}
+
+#login {
+  top: calc(50% - 60px);
+  left: calc(50% - 160px);
+  width: 300px;
+  height: 100px;
+  display: block;
+}
+
+#login button {
+  float: right;
+  width: 60px;
+  margin-right: 14px;
+}
+
+#login input {
+  width: calc(100% - 100px);
+  margin-left: 14px;
+}
+
+#overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 2;
+}
+
+#sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  background: #222;
+  color: white;
+  padding-bottom: 80px;
+  overflow-y: auto;
+}
+
+#profile {
+  width: 250px;
+  padding: 10px;
+  height: 60px;
+  line-height: 40px;
+  background-color: #333;
+  position: fixed;
+  border-bottom: 2px solid #666;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  border: solid 2px white;
+  margin-right: 10px;
+}
+
+#profile > label {
+  width: 170px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  font-size: 1.2em;
+}
+
+#channels {
+  margin-top: 80px;
+}
+
+#sidebar h3 {
+  margin-left: 20px;
+}
+
+#sidebar ul {
+  list-style-type: none;
+  padding: 0 10px;
+}
+
+#sidebar li {
+  margin: 5px 0;
+  cursor: pointer;
+  padding: 5px 5px 5px 15px;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#sidebar li span {
+  color: #555;
+}
+
+#sidebar li span.joined {
+  font-weight: bold;
+  color: white;
+}
+
+#sidebar li span.invited {
+  font-style: italic;
+  color: white;
+}
+
+#sidebar li div {
+  display: none;
+}
+
+#sidebar li:hover {
+  background: #E30000;
+  border-radius: 5px;
+}
+
+#sidebar li:hover div {
+  display: block;
+}
+
+#sidebar-footer {
+  position: fixed;
+  bottom: 0;
+  width: 250px;
+  height: 80px;
+  padding: 20px 0;
+  text-align: center;
+  background-color: #222;
+}
+
+#create-channel-button {
+  margin: 0 auto;
+  padding: 12px;
+  width: 90%;
+}
+
+#channel, #no-channel {
+  position: absolute;
+  top: 0;
+  left: 250px;
+  bottom: 0;
+  right: 0;
+  background: #FAFAFF;
+}
+
+#channel {
+  display: none;
+}
+
+#channel.view-only div.edit-button,
+#channel.view-only div.remove-button,
+#channel.view-only #channel-info button,
+#channel.view-only #channel-members,
+#channel.view-only #channel-message-send,
+#channel.view-only #typing-indicator {
+  display: none;
+}
+
+#channel.view-only #channel-chat {
+  right: 0;
+}
+
+#channel.view-only #channel-join-panel {
+  display: block;
+}
+
+#no-channel p {
+  padding: 50px;
+  font-size: 2em;
+  color: #555;
+}
+
+#channel-info {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  padding: 5px 10px;
+  background: #FFF;
+  border-bottom: 2px solid #666;
+}
+
+#channel-info h1 {
+  font-size: 25px;
+  line-height: 30px;
+  margin: 0;
+  padding: 0;
+  font-weight: bold;
+}
+
+div.remove-button {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-left: 4px;
+  cursor: pointer;
+  display: inline-block;
+  float: right;
+}
+
+div.edit-button {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-left: 4px;
+  cursor: pointer;
+}
+
+#channel-info h2 {
+  font-size: 16px;
+  line-height: 20px;
+  font-style: italic;
+  color: #444;
+  margin: 0;
+  padding: 0;
+  display: inline-block;
+}
+
+.red-button {
+  border-radius: 5px;
+  border: 1px solid black;
+  color: white;
+  box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.4);
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.75);
+  background-color: #E30000;
+}
+
+.red-button:hover {
+  background-color: #B30000;
+}
+
+.white-button {
+  border-radius: 5px;
+  border: 1px solid black;
+  color: white;
+  box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.4);
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.75);
+  background-color: #E3E3E3;
+}
+
+.white-button:hover {
+  background-color: #B3B3B3;
+}
+
+#edit-channel {
+  position: absolute;
+  right: 170px;
+  top: 10px;
+  padding: 10px;
+  line-height: 20px;
+  font-size: 16px;
+}
+
+#delete-channel {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  padding: 10px;
+  line-height: 20px;
+  font-size: 16px;
+}
+
+#channel-body {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+#channel-chat {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  right: 200px;
+}
+
+#channel-messages {
+  margin-bottom: 70px;
+  position: relative;
+  width: 100%;
+  height: calc(100% - 70px);
+  overflow-y: auto;
+}
+
+#channel-messages ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+#channel-messages li {
+  padding: 10px;
+}
+
+#channel-messages li:nth-child(even) {
+  background: #F0F0FA;
+}
+
+#channel-messages li div {
+  display: none;
+}
+
+#channel-messages li:hover div {
+  display: block;
+}
+
+#channel-messages li.editing:hover div {
+  display: none;
+}
+
+#channel-messages li:hover {
+  background: #EBEBF0;
+}
+
+#channel-messages p.author {
+  font-weight: bold;
+  margin: 0;
+  padding: 0;
+  width: calc(100% - 50px);
+}
+
+#channel-messages .timestamp {
+  font-style: italic;
+  color: #333;
+  margin-left: 4px;
+}
+
+#channel-messages p.body {
+  margin: 0;
+  padding: 0;
+  width: calc(100% - 50px);
+}
+
+#channel-messages textarea.edit-body {
+  width: calc(100% - 50px);
+  margin: 0;
+  padding: 0;
+  display: none;
+}
+
+#channel-messages button {
+  display: none;
+  margin: 0 5px;
+}
+
+#channel-messages span.edited {
+  font-style: italic;
+  color: #444;
+  margin-left: 8px;
+}
+
+#channel-messages div {
+  float: right;
+}
+
+#channel-message-send {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-bottom: 10px;
+  border-top: 1px solid #AAA;
+  background: #F5F5F8;
+}
+
+#typing-indicator {
+  padding: 5px 15px;
+  font-style: italic;
+  color: #444;
+}
+
+#typing-indicator span {
+  display: block;
+  min-height: 18px;
+}
+
+#channel-message-send input {
+  display: inline-block;
+  width: calc(100% - 90px);
+  margin-left: 10px;
+  height: 30px;
+  right: 60px;
+  padding: 0 10px;
+  border-radius: 5px;
+  border: 1px solid black;
+}
+
+#channel-message-send button {
+  margin: 0 10px;
+  height: 30px;
+  padding: 5px 10px;
+  display: inline-block;
+}
+
+#channel-join-panel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: none;
+  font-size: 20px;
+  border-top: 1px solid #AAA;
+  background: #F5F5F8;
+  padding: 10px;
+  text-align: center;
+}
+
+#channel-join-panel button {
+  margin: 0 auto;
+  padding: 5px 10px;
+}
+
+#channel-members {
+  position: absolute;
+  right: 0;
+  top: 60px;
+  bottom: 0;
+  width: 200px;
+  border-left: 2px solid #667;
+  background-color: #333;
+  color: white;
+}
+
+#channel-members h3 {
+  margin: 5px;
+  padding: 10px;
+}
+
+#channel-members button {
+  width: 80px;
+  margin-left: 10px;
+  display: inline-block;
+}
+
+#channel-members ul {
+  list-style-type: none;
+  margin: 20px 0 0 0;
+  padding: 0 10px;
+}
+
+#channel-members li {
+  margin: 5px 0;
+  cursor: pointer;
+  padding: 5px 5px 5px 15px;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#channel-members li div {
+  display: none;
+}
+
+#channel-members li:hover {
+  background: #E30000;
+  border-radius: 5px;
+}
+
+#channel-members li:hover div {
+  display: block;
+}
+
+#channel-members li span {
+  display: inline-block;
+  width: 120px;
+  vertical-align: top;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+

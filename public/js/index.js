@@ -1,72 +1,143 @@
-'use strict';
-
-var activeChannel = null;
-var allChannels = [];
-var areTyping = new Set();
-var client = null;
 var fingerprint = new Fingerprint2();
-var password = '8RqK2t9v1MP29WO';
 var request = window.superagent;
 
-$(document).ready(function() {
-  $('#login-button').on('click', function() {
-    var identity = $('#login input').val();
-    if (!identity || !identity.length) { return; }
+var accessManager;
+var activeChannel;
+var client;
+var typingMembers = new Set();
 
-    fingerprint.get(function(result) {
-      logIn(identity, result);
+$(document).ready(function() {
+  $('#login-name').focus();
+
+  $('#login-button').on('click', function() {
+    var identity = $('#login-name').val();
+    if (!identity) { return; }
+
+    fingerprint.get(logIn.bind(null, identity));
+  });
+
+  $('#login-name').on('keydown', function(e) {
+    if (e.keyCode === 13) { $('#login-button').click(); }
+  });
+
+  $('#message-body-input').on('keydown', function(e) {
+    if (e.keyCode === 13) { $('#send-message').click(); }
+    else if (activeChannel) { activeChannel.typing(); }
+  });
+
+  $('#edit-channel').on('click', function() {
+    $('#update-channel-display-name').val(activeChannel.friendlyName || '');
+    $('#update-channel-unique-name').val(activeChannel.uniqueName || '');
+    $('#update-channel-desc').val(activeChannel.attributes.description || '');
+    $('#update-channel-private').prop('checked', activeChannel.isPrivate);
+    $('#update-channel').show();
+    $('#overlay').show();
+  });
+
+  $('#update-channel .remove-button').on('click', function() {
+    $('#update-channel').hide();
+    $('#overlay').hide();
+  });
+
+  $('#delete-channel').on('click', function() {
+    activeChannel && activeChannel.delete();
+  });
+
+  $('#join-channel').on('click', function() {
+    activeChannel.join().then(setActiveChannel);
+  });
+
+  $('#invite-user').on('click', function() {
+    $('#invite-member').show();
+    $('#overlay').show();
+  });
+
+  $('#add-user').on('click', function() {
+    $('#add-member').show();
+    $('#overlay').show();
+  });
+
+  $('#invite-button').on('click', function() {
+    var identity = $('#invite-identity').val();
+    identity && activeChannel.invite(identity).then(function() {
+      $('#invite-member').hide();
+      $('#overlay').hide();
+      $('#invite-identity').val('');
     });
   });
 
-  $('#login input').focus()
-    .on('keydown', function(e) { if (e.keyCode === 13) { $('#login-button').click(); } });
-
-  $('#new-message').on('keydown', function(e) {
-    if (e.keyCode === 13) {
-      e.preventDefault();
-      $('#new-message-button').click();
-    }
+  $('#add-button').on('click', function() {
+    var identity = $('#add-identity').val();
+    identity && activeChannel.add(identity).then(function() {
+      $('#add-member').hide();
+      $('#overlay').hide();
+      $('#add-identity').val('');
+    });
   });
 
-  var $messages = $('#messages');
-  var isLoading = false;
+  $('#invite-member .remove-button').on('click', function() {
+    $('#invite-member').hide();
+    $('#overlay').hide();
+  });
 
-  function stopLoading() { isLoading = false; }
+  $('#add-member .remove-button').on('click', function() {
+    $('#add-member').hide();
+    $('#overlay').hide();
+  });
 
-  /* $messages.on('scroll', throttle(function(e) {
-    if (isLoading) { return; }
+  $('#create-channel .remove-button').on('click', function() {
+    $('#create-channel').hide();
+    $('#overlay').hide();
+  });
 
-    var scrollTop = $messages.scrollTop();
+  $('#create-channel-button').on('click', function() {
+    $('#create-channel').show();
+    $('#overlay').show();
+  });
 
-    if (scrollTop < 30) {
-      // (Historic mode) Load more if we're at the top of the message box
-      isLoading = true;
-      activeChannel.enablePruning();
-      activeChannel.getMoreMessages().then(function(messages) {
-        if (!messages.length) { return };
+  $('#create-new-channel').on('click', function() {
+    var attributes = {
+      description: $('#create-channel-desc').val()
+    };
 
-        var oldHeight = $('#messages ul').height();
-        messages.reverse().forEach(addHistoricalMessage);
-        $messages.scrollTop($('#messages ul').height() - oldHeight);
-      }).then(stopLoading, stopLoading);
-    } else if (scrollTop > $('#messages ul').height() - $messages.height() - 10) {
-      // (Live mode) Enable pruning if we hit the bottom of the message box
-      if (activeChannel.pruningEnabled) { return; }
+    var isPrivate = $('#create-channel-private').is(':checked');
+    var friendlyName = $('#create-channel-display-name').val();
+    var uniqueName = $('#create-channel-unique-name').val();
 
-      isLoading = true;
-      activeChannel.enablePruning();
-      activeChannel.prune().then(function(messages) {
-        messages.forEach(removeMessage);
-      }).then(stopLoading, stopLoading);
-    } else {
-      // (Historic mode) Disable pruning if the user is scrolling through messages
-      activeChannel.disablePruning();
+    client.createChannel({
+      attributes: attributes,
+      friendlyName: friendlyName,
+      isPrivate: isPrivate,
+      uniqueName: uniqueName
+    }).then(function joinChannel(channel) {
+      $('#create-channel').hide();
+      $('#overlay').hide();
+      return channel.join();
+    }).then(setActiveChannel);
+  });
+
+  $('#update-channel-submit').on('click', function() {
+    var desc = $('#update-channel-desc').val();
+    var friendlyName = $('#update-channel-display-name').val();
+    var uniqueName = $('#update-channel-unique-name').val();
+
+    var promises = [];
+    if (desc !== activeChannel.attributes.description) {
+      promises.push(activeChannel.updateAttributes({ description: desc }));
     }
-  }, 500)); */
 
-  $('#new-channel input').on('keydown', function(e) {
-    if (e.keyCode === 13) { $('#new-channel-create').click(); }
-    else if (e.keyCode === 27) { $('#new-channel-cancel').click(); }
+    if (friendlyName !== activeChannel.friendlyName) {
+      promises.push(activeChannel.updateFriendlyName(friendlyName));
+    }
+
+    if (uniqueName !== activeChannel.uniqueName) {
+      promises.push(activeChannel.updateUniqueName(uniqueName));
+    }
+
+    Promise.all(promises).then(function() {
+      $('#update-channel').hide();
+      $('#overlay').hide();
+    });
   });
 });
 
@@ -77,390 +148,339 @@ function logIn(identity, endpointId) {
     var token = res.text;
 
     $('#login').hide();
-    $('#sidebar').show();
+    $('#overlay').hide();
 
-    client = new Twilio.IPMessaging.Client(token, { maxMessages: 20 });
+    accessManager = new Twilio.AccessManager(token);
+    client = new Twilio.IPMessaging.Client(accessManager);
 
-    function addChannel(channel) {
-      allChannels.push(channel);
+    $('#profile label').text(client.identity);
 
-      switch (channel.status) {
-        case 'joined':
-          addJoinedChannel(channel);
-          break;
-        case 'invited':
-          addInvitedChannel(channel);
-          break;
-      }
-    }
+    client.getChannels().then(updateChannels);
 
-    client.getChannels().then(function (channels) {
-      channels
-        .filter(function(channel) { return !!channel.friendlyName; })
-        .forEach(addChannel);
-
-      client.on('channelAdded', function(channel) {
-        console.info('added');
-        allChannels.push(channel);
-      });
-      client.on('channelJoined', addJoinedChannel);
-      client.on('channelInvited', addInvitedChannel);
-
-      client.on('channelRemoved', function(channel) {
-        for(var i = 0; i < allChannels.length; i++) {
-          if(allChannels[i].sid === channel.sid) {
-            allChannels.splice(i, 1);
-            break;
-          }
-        }
-
-        $('#joined-list li[data-sid=' + channel.sid + ']').remove();
-      });
-
-      client.on('channelLeft', function(channel) {
-        $('#joined-list li[data-sid=' + channel.sid + ']').remove();
-
-        if(channel === activeChannel) {
-          clearActiveChannel();
-        }
-      });
-    });
-  });
-
-  $('#new-channel-cancel').on('click', function() {
-    $('#new-channel').hide();
-    $('#channels').show();
-  });
-
-  $('#new-channel-button').on('click', function() {
-    $('#channels').hide();
-    $('#new-channel').show();
-    $('#new-channel-name').focus();
-  });
-
-  $('#new-channel-create').on('click', function() {
-    var attributes = {
-      description: $('#new-channel-desc').val()
-    };
-    var isPrivate = $('#new-channel-is-private').is(':checked');
-    var friendlyName = $('#new-channel-name').val();
-
-    client.createChannel({
-      attributes: attributes,
-      friendlyName: friendlyName,
-      isPrivate: isPrivate
-    }).then(function joinChannel(channel) {
-      $('#new-channel').hide();
-      $('#channels').show();
-      return channel.join();
-    }).then(setActiveChannel);
-  });
-
-  $('#channel-search').on('focus keyup', function() {
-    var search = $('#channel-search').val();
-    var regex = new RegExp(search);
-
-    var $results = allChannels.filter(function(channel) {
-      return regex.test(channel.friendlyName);
-    }).reduce(function(fragment, channel) {
-      var $li = new $('<li/>')
-        .text(channel.friendlyName)
-        .on('click', channel.join.bind(channel));
-
-      fragment.append($li);
-      return fragment;
-    }, $(document.createDocumentFragment()));
-
-    $('#search-results').html($results).show();
-  });
-
-  $('#channel-search').on('blur', function(e) {
-    setTimeout(function() {
-      $('#search-results').empty().hide();
-    }, 100);
+    client.on('channelJoined', updateChannels);
+    client.on('channelInvited', updateChannels);
+    client.on('channelAdded', updateChannels);
+    client.on('channelUpdated', updateChannels);
+    client.on('channelLeft', leaveChannel);
+    client.on('channelRemoved', leaveChannel);
   });
 }
 
-function addJoinedChannel(channel) {
-  var $leaveButton = $('<button/>').text('X').addClass('leave');
-  var $label = $('<label/>').text(channel.friendlyName || channel.sid);
+function leaveChannel(channel) {
+  if (channel == activeChannel && channel.status !== 'joined') {
+    clearActiveChannel();
+  }
 
-  var $li = $('<li/>')
+  updateChannels();
+}
+
+function addKnownChannel(channel) {
+  var $el = $('<li/>')
     .attr('data-sid', channel.sid)
-    .append($label)
-    .append($leaveButton);
+    .on('click', function() {
+      setActiveChannel(channel);
+    });
 
-  $('#joined-list').prepend($li);
+  var $title = $('<span/>')
+    .text(channel.friendlyName)
+    .appendTo($el);
 
-  $leaveButton.on('click', function(e) {
-    e.stopPropagation();
-    channel.leave();
-  });
-
-  $li.on('click', function enterChannel() {
-    setActiveChannel(channel);
-  });
-
-  channel.on('updated', function() {
-    $label.text(channel.friendlyName);
-  });
-
-  return channel;
+  $('#known-channels ul').append($el);
 }
 
 function addInvitedChannel(channel) {
-  $('h3.invited').show();
-
-  var $declineButton = $('<button/>').text('X').addClass('decline');
-  var $label = $('<label/>').text(channel.friendlyName || channel.sid);
-
-  var $li = $('<li/>')
+  var $el = $('<li/>')
     .attr('data-sid', channel.sid)
-    .append($label)
-    .append($declineButton);
+    .on('click', function() {
+      setActiveChannel(channel);
+    });
 
-  $('#invited-list').prepend($li);
+  var $title = $('<span class="invited"/>')
+    .text(channel.friendlyName)
+    .appendTo($el);
 
-  $declineButton.on('click', function(e) {
-    e.stopPropagation();
-    channel.decline().then(removeInvitedChannel);
-  });
+  var $decline = $('<div class="remove-button glyphicon glyphicon-remove"/>')
+    .on('click', function(e) {
+      e.stopPropagation();
+      channel.decline();
+    }).appendTo($el);
 
-  $li.on('click', function enterChannel() {
-    channel.join().then(removeInvitedChannel).then(setActiveChannel);
-  });
-
-  channel.on('updated', function() {
-    $label.text(channel.friendlyName);
-  });
-
-  return channel;
+  $('#invited-channels ul').append($el);
 }
 
-function removeInvitedChannel(channel) {
-  $('#invited-list li[data-sid="' + channel.sid + '"]').remove();
+function addJoinedChannel(channel) {
+  var $el = $('<li/>')
+    .attr('data-sid', channel.sid)
+    .on('click', function() {
+      setActiveChannel(channel);
+    });
 
-  if (!$('#invited-list li').length) { 
-    $('h3.invited').hide();
-  }
+  var $title = $('<span class="joined"/>')
+    .text(channel.friendlyName)
+    .appendTo($el);
 
-  return channel;
+  var $leave = $('<div/>')
+  var $leave = $('<div class="remove-button glyphicon glyphicon-remove"/>')
+    .on('click', function(e) {
+      e.stopPropagation();
+      channel.leave();
+    }).appendTo($el);
+
+  $('#my-channels ul').append($el);
 }
 
-function clearActiveChannel() {
-  $('#messages ul').empty();
-  $('#members ul').empty();
-  $('#channel').hide();
+function removeLeftChannel(channel) {
+  $('#my-channels li[data-sid=' + channel.sid + ']').remove();
 
-  areTyping = new Set();
-
-  if(activeChannel) {
-    activeChannel.removeListener('messageAdded', addMessage);
-    activeChannel.removeListener('messagePruned', removeMessage);
-    activeChannel.removeListener('memberJoined', addMember);
-    activeChannel.removeListener('memberLeft', removeMember);
-    activeChannel.removeListener('typingStarted', typingStarted);
-    activeChannel.removeListener('typingEnded', typingEnded);
-    activeChannel.removeListener('updated', updateActiveChannel);
+  if (channel === activeChannel) {
+    clearActiveChannel();
   }
 }
 
-function setActiveChannel(channel) {
-  clearActiveChannel();
-
-  $('h1#channel-name').text(channel.friendlyName || 'Unnamed Channel');
-  $('h2#channel-desc').text(channel.attributes && channel.attributes.description || '');
-  $('#channel').show();
-
-  $('#new-message').focus();
-
-  channel.on('messageAdded', addMessage);
-  channel.on('messagePruned', removeMessage);
-  channel.on('memberJoined', addMember);
-  channel.on('memberLeft', removeMember);
-  channel.on('updated', updateActiveChannel);
-
-  channel.on('typingStarted', typingStarted);
-  channel.on('typingEnded', typingEnded);
-
-  channel.members.forEach(addMember);
-
-  channel.getMessages().then(function(messages) {
+function updateMessages() {
+  $('#channel-messages ul').empty();
+  activeChannel.getMessages(99999).then(function(messages) {
     messages.forEach(addMessage);
-    $('#messages').scrollTop($('#messages ul').height());
   });
-
-  $('h1#channel-name').off('click');
-  $('h1#channel-name').on('click', function() {
-    var $input = $('<input/>').attr('type', 'text').val(activeChannel.friendlyName);
-    $('h1#channel-name').empty().append($input);
-    $input.focus();
-
-    $input.on('keydown', function(e) {
-      if (e.keyCode === 13) {
-        var name = $input.val();
-        channel.updateFriendlyName(name).then(function() {
-          $('h1#channel-name').text(name);
-        });
-      }
-    });
-
-    $input.on('blur', function() {
-      $('h1#channel-name').text(activeChannel.friendlyName);
-    });
-  });
-
-  $('h2#channel-desc').off('click');
-  $('h2#channel-desc').on('click', function() {
-    var $input = $('<input/>').attr('type', 'text').val(activeChannel.attributes.desc);
-    $('h2#channel-desc').empty().append($input);
-    $input.focus();
-
-    $input.on('keydown', function(e) {
-      if (e.keyCode === 13) {
-        var desc = $input.val();
-        channel.updateAttributes({ description: desc }).then(function() {
-          $('h2#channel-desc').text(desc);
-        });
-      }
-    });
-
-    $input.on('blur', function() {
-      $('h2#channel-desc').text(activeChannel.attributes.desc);
-    });
-  });
-
-  $('#new-message').on('keydown', function(e) {
-    if (e.keyCode !== 13) { activeChannel.typing(); }
-  });
-
-  $('#new-message-button').off('click');
-  $('#new-message-button').on('click', function() {
-    var body = $('textarea#new-message').val();
-    channel.sendMessage(body).then(function() {
-      $('textarea#new-message').val('');
-    });
-  });
-
-  $('#add-button').off('click');
-  $('#add-button').on('click', function() {
-    var identity = $('#invite-name').val();
-    channel.add(identity).then(function() {
-      $('#invite-name').val('');
-    });
-  });
-
-  $('#invite-button').off('click');
-  $('#invite-button').on('click', function() {
-    var identity = $('#invite-name').val();
-    channel.invite(identity).then(function() {
-      $('#invite-name').val('');
-    });
-  });
-
-  $('#delete-button').off('click');
-  $('#delete-button').on('click', function() {
-    channel.delete();
-  });
-
-  activeChannel = channel;
-}
-
-function addMessage(message) {
-  var $messages = $('#messages');
-  var $ul = $('#messages ul');
-  var $li = $('<li/>').text(message.author + ': ' + message.body).attr('id', message.sid);
-  $ul.append($li);
-  if ($messages.scrollTop - $ul.height() < 30) {
-    $messages.scrollTop( $ul.height() );
-  }
-}
-
-function addHistoricalMessage(message) {
-  var $messages = $('#messages');
-  var $ul = $('#messages ul');
-  var $li = $('<li/>').text(message.author + ': ' + message.body).attr('id', message.sid);
-  $ul.prepend($li);
 }
 
 function removeMessage(message) {
-  $('#messages ul #' + message.sid).remove();
+  $('#channel-messages li[data-sid=' + message.sid + ']').remove();
+}
+
+function updateMessage(message) {
+  var $el = $('#channel-messages li[data-sid=' + message.sid + ']');
+  $el.empty();
+  createMessage(message, $el);
+}
+
+function createMessage(message, $el) {
+  var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
+    .on('click', function(e) {
+      e.preventDefault();
+      message.remove();
+    }).appendTo($el);
+
+  var $edit = $('<div class="remove-button glyphicon glyphicon-edit"/>')
+    .on('click', function(e) {
+      e.preventDefault();
+      $('.body', $el).hide();
+      $('.edit-body', $el).show();
+      $('button', $el).show();
+      $el.addClass('editing');
+    }).appendTo($el);
+
+  var $author = $('<p class="author"/>')
+    .text(message.author)
+    .appendTo($el);
+
+  var time = message.timestamp;
+  var minutes = time.getMinutes();
+  var ampm = Math.floor(time.getHours()/12) ? 'PM' : 'AM';
+
+  if (minutes < 10) { minutes = '0' + minutes; }
+
+  var $timestamp = $('<span class="timestamp"/>')
+    .text('(' + (time.getHours()%12) + ':' + minutes + ' ' + ampm + ')')
+    .appendTo($author);
+
+  if (message.lastUpdatedBy) {
+    time = message.dateUpdated;
+    minutes = time.getMinutes();
+    ampm = Math.floor(time.getHours()/12) ? 'PM' : 'AM';
+
+    if (minutes < 10) { minutes = '0' + minutes; }
+
+    $('<span class="timestamp"/>')
+      .text('(Edited by ' + message.lastUpdatedBy + ' at ' +
+        (time.getHours()%12) + ':' + minutes + ' ' + ampm + ')')
+      .appendTo($author)
+  }
+
+  var $body = $('<p class="body"/>')
+    .text(message.body)
+    .appendTo($el);
+
+  var $editBody = $('<textarea class="edit-body"/>')
+    .text(message.body)
+    .appendTo($el);
+
+  var $cancel = $('<button class="cancel-edit"/>')
+    .text('Cancel')
+    .on('click', function(e) {
+      e.preventDefault();
+      $('.edit-body', $el).hide();
+      $('button', $el).hide();
+      $('.body', $el).show();
+      $el.removeClass('editing');
+    }).appendTo($el);
+
+  var $edit = $('<button class="red-button"/>')
+    .text('Make Change')
+    .on('click', function(e) {
+      message.updateBody($editBody.val());
+    }).appendTo($el);
+}
+
+function addMessage(message) {
+  var $el = $('<li/>').attr('data-sid', message.sid);
+  createMessage(message, $el);
+
+  $('#channel-messages ul').append($el);
+  $('#channel-messages').scrollTop($('#channel-messages ul').height());
 }
 
 function addMember(member) {
-  var $kickButton = $('<button/>').text('X').addClass('kick');
-  var $label = $('<label/>').text(member.identity);
+  var $el = $('<li/>')
+    .attr('data-identity', member.identity);
 
-  var $li = $('<li/>')
-    .attr('data-id', member.identity)
-    .append($label)
-    .append($kickButton);
+  var $span = $('<span/>')
+    .text(member.identity)
+    .appendTo($el);
 
-  $('#members ul').append($li);
+  var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
+    .on('click', member.remove.bind(member))
+    .appendTo($el);
 
-  $kickButton.on('click', function(e) {
-    e.stopPropagation();
-    member.remove();
+  $('#channel-members ul').append($el);
+}
+
+function updateMembers() {
+  $('#channel-members ul').empty();
+  var members = [];
+
+  activeChannel.members.forEach(function(member) {
+    members.push(member);
+  });
+
+  members.sort(function(a, b) {
+    return a.identity > b.identity;
+  }).forEach(addMember);
+}
+
+function updateChannels() {
+  $('#known-channels ul').empty();
+  $('#invited-channels ul').empty();
+  $('#my-channels ul').empty();
+
+  var channels = [];
+
+  client.channels.forEach(function(channel) {
+    channels.push(channel);
+  });
+
+  channels = channels.sort(function(a, b) {
+    return a.friendlyName > b.friendlyName;
+  });
+
+  channels.forEach(function(channel) {
+    switch (channel.status) {
+      case 'joined':
+        addJoinedChannel(channel);
+        break;
+      case 'invited':
+        addInvitedChannel(channel);
+        break;
+      default:
+        addKnownChannel(channel);
+        break;
+    }
   });
 }
 
-function removeMember(member) {
-  var $member = $('#members li[data-id="' + member.identity + '"]');
-  $member.remove();
-}
+function setActiveChannel(channel) {
+  if (activeChannel) {
+    activeChannel.removeListener('messageAdded', addMessage);
+    activeChannel.removeListener('messageRemoved', removeMessage);
+    activeChannel.removeListener('messageUpdated', updateMessage);
+    activeChannel.removeListener('updated', updateActiveChannel);
+  }
+  
+  activeChannel = channel;
 
-function updateActiveChannel(channel) {
-  $('h1#channel-name').text(channel.friendlyName);
-  $('h2#channel-desc').text(channel.attributes && channel.attributes.description);
-}
+  $('#channel-title').text(channel.friendlyName);
+  $('#channel-desc').text(channel.attributes.description);
+  $('#channel-messages ul').empty();
+  $('#channel-members ul').empty();
 
-function typingStarted(member) {
-  areTyping.add(member.identity);
-  showTyping();
-}
+  var messagesToLoad;
+  if (channel.status !== 'joined') {
+    $('#channel').addClass('view-only');
 
-function typingEnded(member) {
-  areTyping.delete(member.identity);
-  showTyping();
-}
-
-function showTyping() {
-  var names = [];
-  areTyping.forEach(function(name) {
-    names.push(name);
-  });
-
-  var typingText = '';
-  if (!names.length) {
-    typingText = '';
-  } else if (names.length === 1) {
-    typingText = names[0] + ' is typing.';
+    messagesToLoad = 25;
   } else {
-    typingText = names.join(', ') + ' are typing.';
+    $('#channel').removeClass('view-only');
   }
 
-  $('span#typing').text(typingText);
+  $('#send-message').off('click');
+  $('#send-message').on('click', function() {
+    var body = $('#message-body-input').val();
+    channel.sendMessage(body).then(function() {
+      $('#message-body-input').val('').focus();
+    });
+  });
+
+  activeChannel.on('updated', updateActiveChannel);
+
+  channel.getMessages(messagesToLoad).then(function(messages) {
+    messages.forEach(addMessage);
+
+    channel.on('messageAdded', addMessage);
+    channel.on('messageUpdated', updateMessage);
+    channel.on('messageRemoved', removeMessage);
+  });
+
+  channel.getMembers().then(function(members) {
+    updateMembers();
+
+    channel.on('memberJoined', updateMembers);
+    channel.on('memberLeft', updateMembers);
+  });
+
+  channel.on('typingStarted', function(member) {
+    typingMembers.add(member.identity);
+    updateTypingIndicator();
+  });
+
+  channel.on('typingEnded', function(member) {
+    typingMembers.delete(member.identity);
+    updateTypingIndicator();
+  });
+
+  $('#no-channel').hide();
+  $('#channel').show();
+
+  $('#message-body-input').focus();
 }
 
-function throttle(fn, threshhold, scope) {
-  threshhold || (threshhold = 250);
-  var last,
-      deferTimer;
-  return function () {
-    var context = scope || this;
-
-    var now = +new Date,
-        args = arguments;
-    if (last && now < last + threshhold) {
-      // hold on to it
-      clearTimeout(deferTimer);
-      deferTimer = setTimeout(function () {
-        last = now;
-        fn.apply(context, args);
-      }, threshhold);
-    } else {
-      last = now;
-      fn.apply(context, args);
-    }
-  };
+function clearActiveChannel() {
+  $('#channel').hide();
+  $('#no-channel').show();
 }
+
+function updateActiveChannel() {
+  $('#channel-title').text(activeChannel.friendlyName);
+  $('#channel-desc').text(activeChannel.attributes.description);
+}
+
+function updateTypingIndicator() {
+  var message = 'Typing: ';
+  var names = Array.from(typingMembers).slice(0,3);
+
+  if (typingMembers.size) {
+    message += names.join(', ');
+  }
+
+  if (typingMembers.size > 3) {
+    message += ', and ' + (typingMembers.size-3) + 'more';
+  }
+
+  if (typingMembers.size) {
+    message += '...';
+  } else {
+    message = '';
+  }
+
+  $('#typing-indicator span').text(message);
+}
+
