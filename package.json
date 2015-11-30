@@ -1,6 +1,6 @@
 {
   "name": "ip-demo-js",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "description": "Twilio JS IP Messaging SDK Demo",
   "main": "server.js",
   "scripts": {
