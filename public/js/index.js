@@ -4,7 +4,6 @@ var request = window.superagent;
 var accessManager;
 var activeChannel;
 var client;
-var newestMessageIndex = 0;
 var typingMembers = new Set();
 
 $(document).ready(function() {
@@ -39,6 +38,8 @@ $(document).ready(function() {
   $('#channel-messages').on('scroll', function(e) {
     var $messages = $('#channel-messages');
     if ($('#channel-messages ul').height() - 50 < $messages.scrollTop() + $messages.height()) {
+      var newestMessageIndex = activeChannel.messages.length ?
+        activeChannel.messages[activeChannel.messages.length-1].index : 0;
       if (!isUpdatingConsumption && activeChannel.lastConsumedMessageIndex !== newestMessageIndex) {
         isUpdatingConsumption = true;
         activeChannel.updateLastConsumedMessageIndex(newestMessageIndex).then(() => {
@@ -369,6 +370,13 @@ function addMessage(message) {
     $messages.scrollTop($('#channel-messages ul').height());
   }
 
+  if ($('#channel-messages ul').height() <= $messages.height() &&
+      message.index > message.channel.lastConsumedMessageIndex) {
+    message.channel.updateLastConsumedMessageIndex(message.index);
+  }
+
+  var newestMessageIndex = activeChannel.messages.length ?
+    activeChannel.messages[activeChannel.messages.length-1].index : 0;
   if (message.index > newestMessageIndex) {
     newestMessageIndex = message.index;
   }
@@ -443,41 +451,53 @@ function setActiveChannel(channel) {
   activeChannel = channel;
 
   $('#channel-title').text(channel.friendlyName);
-  $('#channel-desc').text(channel.attributes.description);
   $('#channel-messages ul').empty();
   $('#channel-members ul').empty();
-
-  var messagesToLoad;
-  if (channel.status !== 'joined') {
-    $('#channel').addClass('view-only');
-
-    messagesToLoad = 25;
-  } else {
-    $('#channel').removeClass('view-only');
-  }
+  activeChannel.getAttributes().then(function(attributes) {
+    $('#channel-desc').text(attributes.description);
+  });
 
   $('#send-message').off('click');
   $('#send-message').on('click', function() {
     var body = $('#message-body-input').val();
     channel.sendMessage(body).then(function() {
       $('#message-body-input').val('').focus();
+      $('#channel-messages').scrollTop($('#channel-messages ul').height());
+      $('#channel-messages li.last-read').removeClass('last-read');
     });
   });
 
   activeChannel.on('updated', updateActiveChannel);
 
-  channel.getMessages(messagesToLoad).then(function(messages) {
+  $('#no-channel').hide();
+  $('#channel').show();
+
+  if (channel.status !== 'joined') {
+    $('#channel').addClass('view-only');
+    return;
+  } else {
+    $('#channel').removeClass('view-only');
+  }
+
+  channel.getMessages(99999).then(function(messages) {
     messages.forEach(addMessage);
 
     channel.on('messageAdded', addMessage);
     channel.on('messageUpdated', updateMessage);
     channel.on('messageRemoved', removeMessage);
 
+    var newestMessageIndex = activeChannel.messages.length ?
+      activeChannel.messages[activeChannel.messages.length-1].index : 0;
     var lastIndex = channel.lastConsumedMessageIndex;
     if (lastIndex && lastIndex !== newestMessageIndex) {
       var $li = $('li[data-index='+ lastIndex + ']');
+      var top = $li.position() && $li.position().top;
       $li.addClass('last-read');
-      $('#channel-messages').scrollTop($li.position().top + $('#channel-messages').scrollTop());
+      $('#channel-messages').scrollTop(top + $('#channel-messages').scrollTop());
+    }
+
+    if ($('#channel-messages ul').height() <= $('#channel-messages').height()) {
+      channel.updateLastConsumedMessageIndex(newestMessageIndex).then(updateChannels);
     }
   });
 
@@ -497,9 +517,6 @@ function setActiveChannel(channel) {
     typingMembers.delete(member.identity);
     updateTypingIndicator();
   });
-
-  $('#no-channel').hide();
-  $('#channel').show();
 
   $('#message-body-input').focus();
 }
