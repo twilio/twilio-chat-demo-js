@@ -173,8 +173,11 @@ body {
 }
 
 #sidebar li span.joined {
-  font-weight: bold;
   color: white;
+}
+
+#sidebar li span.new-messages {
+  font-weight: bold;
 }
 
 #sidebar li span.invited {
@@ -370,10 +373,30 @@ div.edit-button {
 
 #channel-messages li {
   padding: 10px;
+  position: relative;
+}
+
+#channel-messages p.last-read {
+  position: absolute;
+  bottom: 2px;
+  right: 10px;
+  margin: 0;
+  font-size: 12px;
+  color: red;
+  font-weight: bold;
+  display: none;
 }
 
 #channel-messages li:nth-child(even) {
   background: #F0F0FA;
+}
+
+#channel-messages li.last-read {
+  border-bottom: 1px solid red;
+}
+
+#channel-messages li.last-read p.last-read {
+  display: block;
 }
 
 #channel-messages li div {
