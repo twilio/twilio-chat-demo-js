@@ -165,8 +165,7 @@ function logIn(identity, endpointId) {
     $('#login').hide();
     $('#overlay').hide();
 
-    accessManager = new Twilio.AccessManager(token);
-    client = new Twilio.IPMessaging.Client(accessManager);
+    client = new Twilio.IPMessaging.Client(token);
 
     $('#profile label').text(client.identity);
 
@@ -197,7 +196,7 @@ function leaveChannel(channel) {
     clearActiveChannel();
   }
 
-  channel.off('messageAdded', updateUnreadMessages);
+  channel.removeListener('messageAdded', updateUnreadMessages);
 
   updateChannels();
 }
