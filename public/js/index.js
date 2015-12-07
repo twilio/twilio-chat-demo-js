@@ -308,6 +308,10 @@ function createMessage(message, $el) {
       $el.addClass('editing');
     }).appendTo($el);
 
+  var $img = $('<img/>')
+    .attr('src', 'http://gravatar.com/avatar/' + MD5(message.author) + '?s=30&d=mm&r=g')
+    .appendTo($el);
+
   var $author = $('<p class="author"/>')
     .text(message.author)
     .appendTo($el);
@@ -362,6 +366,9 @@ function createMessage(message, $el) {
   var $lastRead = $('<p class="last-read"/>')
     .text('New messages')
     .appendTo($el);
+
+  var $membersRead = $('<p class="members-read"/>')
+    .appendTo($el);
 }
 
 function addMessage(message) {
@@ -403,6 +410,8 @@ function addMember(member) {
   var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
     .on('click', member.remove.bind(member))
     .appendTo($el);
+
+  updateMember(member);
 
   $('#channel-members ul').append($el);
 }
@@ -450,12 +459,31 @@ function updateChannels() {
   });
 }
 
+function updateMember(member) {
+  if (member.identity === decodeURIComponent(client.identity)) { return; }
+
+  var $lastRead = $('#channel-messages p.members-read img[data-identity="' + member.identity + '"]');
+
+  if (!$lastRead.length) {
+    $lastRead = $('<img/>')
+      .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity) + '?s=20&d=mm&r=g')
+      .attr('title', member.identity)
+      .attr('data-identity', member.identity);
+  }
+
+  var lastIndex = member.lastConsumedMessageIndex;
+  if (lastIndex) {
+    $('#channel-messages li[data-index=' + lastIndex + '] p.members-read').append($lastRead);
+  }
+}
+
 function setActiveChannel(channel) {
   if (activeChannel) {
     activeChannel.removeListener('messageAdded', addMessage);
     activeChannel.removeListener('messageRemoved', removeMessage);
     activeChannel.removeListener('messageUpdated', updateMessage);
     activeChannel.removeListener('updated', updateActiveChannel);
+    activeChannel.removeListener('memberUpdated', updateMember);
   }
   
   activeChannel = channel;
@@ -509,13 +537,14 @@ function setActiveChannel(channel) {
     if ($('#channel-messages ul').height() <= $('#channel-messages').height()) {
       channel.updateLastConsumedMessageIndex(newestMessageIndex).then(updateChannels);
     }
-  });
 
-  channel.getMembers().then(function(members) {
+    return channel.getMembers();
+  }).then(function(members) {
     updateMembers();
 
     channel.on('memberJoined', updateMembers);
     channel.on('memberLeft', updateMembers);
+    channel.on('memberUpdated', updateMember);
   });
 
   channel.on('typingStarted', function(member) {

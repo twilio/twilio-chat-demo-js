@@ -83,6 +83,12 @@ body {
   width: 300px;
   height: 100px;
   display: block;
+  text-align: center;
+  padding-top: 30px;
+}
+
+#login div {
+  margin: 0 auto;
 }
 
 #login button {
@@ -384,6 +390,32 @@ div.edit-button {
   position: relative;
 }
 
+#channel-messages li > img {
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  border: 2px solid #333;
+  margin-right: 5px;
+}
+
+#channel-messages p.members-read {
+  position: absolute;
+  bottom: 2px;
+  right: 10px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+#channel-messages p.members-read img {
+  height: 16px;
+  width: 16px;
+  border-radius: 8px;
+  border: solid 1px #333;
+  float: right;
+  margin-left: 4px;
+}
+
 #channel-messages p.last-read {
   position: absolute;
   bottom: 2px;
@@ -407,15 +439,15 @@ div.edit-button {
   display: block;
 }
 
-#channel-messages li div {
+#channel-messages li > div {
   display: none;
 }
 
-#channel-messages li:hover div {
+#channel-messages li:hover > div {
   display: block;
 }
 
-#channel-messages li.editing:hover div {
+#channel-messages li.editing:hover > div {
   display: none;
 }
 
@@ -424,10 +456,11 @@ div.edit-button {
 }
 
 #channel-messages p.author {
+  display: inline-block;
   font-weight: bold;
   margin: 0;
   padding: 0;
-  width: calc(100% - 50px);
+  width: calc(100% - 90px);
 }
 
 #channel-messages .timestamp {
@@ -437,14 +470,14 @@ div.edit-button {
 }
 
 #channel-messages p.body {
-  margin: 0;
+  margin: 0 0 0 35px;
   padding: 0;
-  width: calc(100% - 50px);
+  width: calc(100% - 90px);
 }
 
 #channel-messages textarea.edit-body {
-  width: calc(100% - 50px);
-  margin: 0;
+  width: calc(100% - 90px);
+  margin: 5px 0 0 35px;
   padding: 0;
   display: none;
 }
@@ -582,7 +615,7 @@ div.edit-button {
 
 #channel-members li span {
   display: inline-block;
-  width: 120px;
+  width: 110px;
   vertical-align: top;
   white-space: nowrap;
   overflow: hidden;
