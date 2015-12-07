@@ -42,7 +42,7 @@ $(document).ready(function() {
         activeChannel.messages[activeChannel.messages.length-1].index : 0;
       if (!isUpdatingConsumption && activeChannel.lastConsumedMessageIndex !== newestMessageIndex) {
         isUpdatingConsumption = true;
-        activeChannel.updateLastConsumedMessageIndex(newestMessageIndex).then(() => {
+        activeChannel.updateLastConsumedMessageIndex(newestMessageIndex).then(function() {
           isUpdatingConsumption = false;
         });
       }
