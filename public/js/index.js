@@ -7,7 +7,7 @@ var client;
 var typingMembers = new Set();
 
 $(document).ready(function() {
-  $('#login-name').focus();
+  /*$('#login-name').focus();
 
   $('#login-button').on('click', function() {
     var identity = $('#login-name').val();
@@ -18,7 +18,7 @@ $(document).ready(function() {
 
   $('#login-name').on('keydown', function(e) {
     if (e.keyCode === 13) { $('#login-button').click(); }
-  });
+  });*/
 
   $('#message-body-input').on('keydown', function(e) {
     if (e.keyCode === 13) { $('#send-message').click(); }
@@ -156,31 +156,38 @@ $(document).ready(function() {
   });
 });
 
-function logIn(identity, endpointId) {
-  request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
-    if (err) { throw new Error(res.text); }
+function logIn(googleUser) {
+  var profile = googleUser.getBasicProfile();
+  var identity = profile.getEmail().toLowerCase();
+  var fullName = profile.getName();
+  var avatarUrl = profile.getImageUrl();
+  fingerprint.get(function(endpointId) {
+    request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
+      if (err) { throw new Error(res.text); }
 
-    var token = res.text;
+      var token = res.text;
 
-    $('#login').hide();
-    $('#overlay').hide();
+      $('#login').hide();
+      $('#overlay').hide();
 
-    client = new Twilio.IPMessaging.Client(token);
+      client = new Twilio.IPMessaging.Client(token);
 
-    $('#profile label').text(client.identity);
+      $('#profile label').text(fullName);
+      $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
 
-    client.getChannels().then(updateChannels);
+      client.getChannels().then(updateChannels);
 
-    client.on('channelJoined', function(channel) {
-      channel.on('messageAdded', updateUnreadMessages);
-      updateChannels();
+      client.on('channelJoined', function(channel) {
+        channel.on('messageAdded', updateUnreadMessages);
+        updateChannels();
+      });
+
+      client.on('channelInvited', updateChannels);
+      client.on('channelAdded', updateChannels);
+      client.on('channelUpdated', updateChannels);
+      client.on('channelLeft', leaveChannel);
+      client.on('channelRemoved', leaveChannel);
     });
-
-    client.on('channelInvited', updateChannels);
-    client.on('channelAdded', updateChannels);
-    client.on('channelUpdated', updateChannels);
-    client.on('channelLeft', leaveChannel);
-    client.on('channelRemoved', leaveChannel);
   });
 }
 
@@ -384,6 +391,10 @@ function addMessage(message) {
 function addMember(member) {
   var $el = $('<li/>')
     .attr('data-identity', member.identity);
+
+  var $img = $('<img/>')
+    .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity.toLowerCase()) + '?s=20&d=mm&r=g')
+    .appendTo($el);
 
   var $span = $('<span/>')
     .text(member.identity)

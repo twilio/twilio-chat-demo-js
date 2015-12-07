@@ -3,15 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <title>Twilio Chat</title>
+  <meta name="google-signin-scope" content="profile">
+  <meta name="google-signin-client_id" content="1003561219122-8e45ibd1i42tu1gnqvs15e49f8g7fq0v.apps.googleusercontent.com">
 
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"> 
   <link rel="stylesheet" type="text/css" href="/css/main.css"> 
 </head>
 <body>
   <div id="login" class="popup">
+    <div class="g-signin2" data-onsuccess="logIn" data-theme="light"></div>
+    <!--
     <h3>Log In</h3>
     <input id="login-name" placeholder="Identity"></input>
     <button id="login-button" class="red-button">Log In</button>
+    -->
   </div>
   <div id="add-member" class="popup">
     <h3>Add User<div class="remove-button glyphicon glyphicon-remove"></div></h3>
@@ -42,7 +47,7 @@
   <div id="overlay"></div>
   <div id="sidebar">
     <div id="profile">
-      <span class="glyphicon glyphicon-user"></span>
+      <img></img>
       <label></label>
     </div>
     <div id="channels">
@@ -97,6 +102,8 @@
   <script src="/js/vendor/fingerprint2.js"></script>
   <script src="/js/vendor/superagent.js"></script>
   <script src="https://media.twiliocdn.com/sdk/rtc/js/ip-messaging/v0.9/twilio-ip-messaging.js"></script>
+  <script src="https://apis.google.com/js/platform.js" async defer></script>
+  <script type="text/javascript" src="/js/md5.js"></script>
   <script type="text/javascript" src="/js/index.js"></script>
 </body>
 </html>

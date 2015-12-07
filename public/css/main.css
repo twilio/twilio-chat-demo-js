@@ -136,6 +136,13 @@ body {
   margin-right: 10px;
 }
 
+#profile > img {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  border: 2px solid white;
+}
+
 #profile > label {
   width: 170px;
   white-space: nowrap;
@@ -143,6 +150,7 @@ body {
   text-overflow: ellipsis;
   vertical-align: middle;
   font-size: 1.2em;
+  margin-left: 6px;
 }
 
 #channels {
@@ -549,6 +557,14 @@ div.edit-button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+#channel-members li img {
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  border: 1px solid black;
+  margin-right: 5px;
 }
 
 #channel-members li div {
