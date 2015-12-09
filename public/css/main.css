@@ -79,12 +79,15 @@ body {
 
 #login {
   top: calc(50% - 60px);
-  left: calc(50% - 160px);
-  width: 300px;
-  height: 100px;
+  left: calc(50% - 200px);
+  width: 400px;
+  height: 160px;
   display: block;
   text-align: center;
-  padding-top: 30px;
+}
+
+#login p {
+  margin: 10px auto;
 }
 
 #login div {
@@ -93,12 +96,12 @@ body {
 
 #login button {
   float: right;
-  width: 60px;
+  width: 130px;
   margin-right: 14px;
 }
 
 #login input {
-  width: calc(100% - 100px);
+  width: calc(100% - 170px);
   margin-left: 14px;
 }
 

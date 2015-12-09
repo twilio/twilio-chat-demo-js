@@ -7,18 +7,18 @@ var client;
 var typingMembers = new Set();
 
 $(document).ready(function() {
-  /*$('#login-name').focus();
+  $('#login-name').focus();
 
   $('#login-button').on('click', function() {
     var identity = $('#login-name').val();
     if (!identity) { return; }
 
-    fingerprint.get(logIn.bind(null, identity));
+    logIn(identity, identity);
   });
 
   $('#login-name').on('keydown', function(e) {
     if (e.keyCode === 13) { $('#login-button').click(); }
-  });*/
+  });
 
   $('#message-body-input').on('keydown', function(e) {
     if (e.keyCode === 13) { $('#send-message').click(); }
@@ -156,11 +156,14 @@ $(document).ready(function() {
   });
 });
 
-function logIn(googleUser) {
+function googleLogIn(googleUser) {
   var profile = googleUser.getBasicProfile();
   var identity = profile.getEmail().toLowerCase();
   var fullName = profile.getName();
-  var avatarUrl = profile.getImageUrl();
+  logIn(identity, fullName);
+}
+
+function logIn(identity, displayName) {
   fingerprint.get(function(endpointId) {
     request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
       if (err) { throw new Error(res.text); }
@@ -170,9 +173,10 @@ function logIn(googleUser) {
       $('#login').hide();
       $('#overlay').hide();
 
-      client = new Twilio.IPMessaging.Client(token);
+      var accessManager = new Twilio.AccessManager(token);
+      client = new Twilio.IPMessaging.Client(accessManager);
 
-      $('#profile label').text(fullName);
+      $('#profile label').text(displayName);
       $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
 
       client.getChannels().then(updateChannels);

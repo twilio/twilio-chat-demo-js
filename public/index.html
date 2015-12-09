@@ -11,12 +11,11 @@
 </head>
 <body>
   <div id="login" class="popup">
-    <div class="g-signin2" data-onsuccess="logIn" data-theme="light"></div>
-    <!--
     <h3>Log In</h3>
     <input id="login-name" placeholder="Identity"></input>
-    <button id="login-button" class="red-button">Log In</button>
-    -->
+    <button id="login-button" class="red-button">Log In As Guest</button>
+    <p>-or-</p>
+    <div class="g-signin2" data-onsuccess="googleLogIn" data-theme="light"></div>
   </div>
   <div id="add-member" class="popup">
     <h3>Add User<div class="remove-button glyphicon glyphicon-remove"></div></h3>
@@ -101,6 +100,7 @@
   <script src="https://code.jquery.com/jquery-2.1.4.js"></script>
   <script src="/js/vendor/fingerprint2.js"></script>
   <script src="/js/vendor/superagent.js"></script>
+  <script src="https://media.twiliocdn.com/sdk/js/common/releases/0.1.2/twilio-common.js"></script>
   <script src="https://media.twiliocdn.com/sdk/rtc/js/ip-messaging/v0.9/twilio-ip-messaging.js"></script>
   <script src="https://apis.google.com/js/platform.js" async defer></script>
   <script type="text/javascript" src="/js/md5.js"></script>
