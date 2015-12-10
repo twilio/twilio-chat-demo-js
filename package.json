@@ -18,6 +18,6 @@
   "homepage": "https://github.com/twilio/ip-demo-js",
   "dependencies": {
     "express": "^4.13.3",
-    "twilio": "^2.3.0"
+    "twilio": "^2.6.0"
   }
 }

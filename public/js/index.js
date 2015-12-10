@@ -13,7 +13,7 @@ $(document).ready(function() {
     var identity = $('#login-name').val();
     if (!identity) { return; }
 
-    fingerprint.get(logIn.bind(null, identity));
+    logIn(identity, identity);
   });
 
   $('#login-name').on('keydown', function(e) {
@@ -156,31 +156,42 @@ $(document).ready(function() {
   });
 });
 
-function logIn(identity, endpointId) {
-  request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
-    if (err) { throw new Error(res.text); }
+function googleLogIn(googleUser) {
+  var profile = googleUser.getBasicProfile();
+  var identity = profile.getEmail().toLowerCase();
+  var fullName = profile.getName();
+  logIn(identity, fullName);
+}
 
-    var token = res.text;
+function logIn(identity, displayName) {
+  fingerprint.get(function(endpointId) {
+    request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
+      if (err) { throw new Error(res.text); }
 
-    $('#login').hide();
-    $('#overlay').hide();
+      var token = res.text;
 
-    client = new Twilio.IPMessaging.Client(token);
+      $('#login').hide();
+      $('#overlay').hide();
 
-    $('#profile label').text(client.identity);
+      var accessManager = new Twilio.AccessManager(token);
+      client = new Twilio.IPMessaging.Client(accessManager);
 
-    client.getChannels().then(updateChannels);
+      $('#profile label').text(displayName);
+      $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
 
-    client.on('channelJoined', function(channel) {
-      channel.on('messageAdded', updateUnreadMessages);
-      updateChannels();
+      client.getChannels().then(updateChannels);
+
+      client.on('channelJoined', function(channel) {
+        channel.on('messageAdded', updateUnreadMessages);
+        updateChannels();
+      });
+
+      client.on('channelInvited', updateChannels);
+      client.on('channelAdded', updateChannels);
+      client.on('channelUpdated', updateChannels);
+      client.on('channelLeft', leaveChannel);
+      client.on('channelRemoved', leaveChannel);
     });
-
-    client.on('channelInvited', updateChannels);
-    client.on('channelAdded', updateChannels);
-    client.on('channelUpdated', updateChannels);
-    client.on('channelLeft', leaveChannel);
-    client.on('channelRemoved', leaveChannel);
   });
 }
 
@@ -301,6 +312,10 @@ function createMessage(message, $el) {
       $el.addClass('editing');
     }).appendTo($el);
 
+  var $img = $('<img/>')
+    .attr('src', 'http://gravatar.com/avatar/' + MD5(message.author) + '?s=30&d=mm&r=g')
+    .appendTo($el);
+
   var $author = $('<p class="author"/>')
     .text(message.author)
     .appendTo($el);
@@ -355,6 +370,9 @@ function createMessage(message, $el) {
   var $lastRead = $('<p class="last-read"/>')
     .text('New messages')
     .appendTo($el);
+
+  var $membersRead = $('<p class="members-read"/>')
+    .appendTo($el);
 }
 
 function addMessage(message) {
@@ -385,6 +403,10 @@ function addMember(member) {
   var $el = $('<li/>')
     .attr('data-identity', member.identity);
 
+  var $img = $('<img/>')
+    .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity.toLowerCase()) + '?s=20&d=mm&r=g')
+    .appendTo($el);
+
   var $span = $('<span/>')
     .text(member.identity)
     .appendTo($el);
@@ -392,6 +414,8 @@ function addMember(member) {
   var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
     .on('click', member.remove.bind(member))
     .appendTo($el);
+
+  updateMember(member);
 
   $('#channel-members ul').append($el);
 }
@@ -439,12 +463,31 @@ function updateChannels() {
   });
 }
 
+function updateMember(member) {
+  if (member.identity === decodeURIComponent(client.identity)) { return; }
+
+  var $lastRead = $('#channel-messages p.members-read img[data-identity="' + member.identity + '"]');
+
+  if (!$lastRead.length) {
+    $lastRead = $('<img/>')
+      .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity) + '?s=20&d=mm&r=g')
+      .attr('title', member.identity)
+      .attr('data-identity', member.identity);
+  }
+
+  var lastIndex = member.lastConsumedMessageIndex;
+  if (lastIndex) {
+    $('#channel-messages li[data-index=' + lastIndex + '] p.members-read').append($lastRead);
+  }
+}
+
 function setActiveChannel(channel) {
   if (activeChannel) {
     activeChannel.removeListener('messageAdded', addMessage);
     activeChannel.removeListener('messageRemoved', removeMessage);
     activeChannel.removeListener('messageUpdated', updateMessage);
     activeChannel.removeListener('updated', updateActiveChannel);
+    activeChannel.removeListener('memberUpdated', updateMember);
   }
   
   activeChannel = channel;
@@ -498,13 +541,14 @@ function setActiveChannel(channel) {
     if ($('#channel-messages ul').height() <= $('#channel-messages').height()) {
       channel.updateLastConsumedMessageIndex(newestMessageIndex).then(updateChannels);
     }
-  });
 
-  channel.getMembers().then(function(members) {
+    return channel.getMembers();
+  }).then(function(members) {
     updateMembers();
 
     channel.on('memberJoined', updateMembers);
     channel.on('memberLeft', updateMembers);
+    channel.on('memberUpdated', updateMember);
   });
 
   channel.on('typingStarted', function(member) {
