@@ -31,5 +31,5 @@ To change to a different version, just open `public/index.html` and change the
 following string to point to the URL of the version you'd like to use:
 
 ```
-<script src="https://media.twiliocdn.com/sdk/rtc/js/ip-messaging/v0.9/twilio-ip-messaging.js"></script>
+<script src="https://media.twiliocdn.com/sdk/js/ip-messaging/releases/0.10.3/twilio-ip-messaging.js"></script>
 ```
