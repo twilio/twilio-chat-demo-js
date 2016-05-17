@@ -6,6 +6,8 @@ var activeChannel;
 var client;
 var typingMembers = new Set();
 
+var activeChannelPage;
+
 $(document).ready(function() {
   $('#login-name').focus();
 
@@ -46,6 +48,19 @@ $(document).ready(function() {
           isUpdatingConsumption = false;
         });
       }
+    }
+
+    var self = $(this);
+    if($messages.scrollTop() < 50 && activeChannelPage && activeChannelPage.hasPrevPage && !self.hasClass('loader')) {
+      self.addClass('loader');
+      var initialHeight = $('ul', self).height();
+      activeChannelPage.prevPage().then(page => {
+        page.items.reverse().forEach(prependMessage);
+        activeChannelPage = page;
+        var difference = $('ul', self).height() - initialHeight;
+        self.scrollTop(difference);
+        self.removeClass('loader');
+      });
     }
   });
 
@@ -173,11 +188,34 @@ function logIn(identity, displayName) {
       $('#login').hide();
       $('#overlay').hide();
 
-      var accessManager = new Twilio.AccessManager(token);
-      client = new Twilio.IPMessaging.Client(accessManager);
+      let options = {
+        IPMessaging: { typingUri: 'https://aim.dev-us1.twilio.com' },
+        DataSync: { cdsUri: 'https://cds.dev-us1.twilio.com' },
+        Notification: { ersUri: 'https://ers.dev-us1.twilio.com' },
+        Twilsock: { uri: 'wss://tsock.dev-us1.twilio.com' },
+        logLevel: 'debug'
+      };
 
-      $('#profile label').text(displayName);
+      /*
+      let options = {
+        IPMessaging: { typingUri: 'https://aim.stage-us1.twilio.com' },
+        DataSync: { cdsUri: 'https://cds.stage-us1.twilio.com' },
+        Notification: { ersUri: 'https://ers.stage-us1.twilio.com' },
+        Twilsock: { uri: 'wss://tsock.stage-us1.twilio.com' }
+      };
+      */
+
+      // var options = { logLevel: 'debug' };
+
+      var accessManager = new Twilio.AccessManager(token);
+      client = new Twilio.IPMessaging.Client(accessManager, options);
+
+      $('#profile label').text(client.userInfo.friendlyName || client.userInfo.identity);
       $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
+
+      client.userInfo.on('updated', function() {
+        $('#profile label').text(client.userInfo.friendlyName || client.userInfo.identity);
+      });
 
       client.getChannels().then(updateChannels);
 
@@ -281,8 +319,8 @@ function removeLeftChannel(channel) {
 
 function updateMessages() {
   $('#channel-messages ul').empty();
-  activeChannel.getMessages(99999).then(function(messages) {
-    messages.forEach(addMessage);
+  activeChannel.getMessagesPaged(30).then(function(page) {
+    page.items.forEach(addMessage);
   });
 }
 
@@ -375,6 +413,13 @@ function createMessage(message, $el) {
     .appendTo($el);
 }
 
+function prependMessage(message) {
+  var $messages = $('#channel-messages');
+  var $el = $('<li/>').attr('data-index', message.index);
+  createMessage(message, $el);
+  $('#channel-messages ul').prepend($el);
+}
+
 function addMessage(message) {
   var $messages = $('#channel-messages');
   var initHeight = $('#channel-messages ul').height();
@@ -401,14 +446,17 @@ function addMessage(message) {
 
 function addMember(member) {
   var $el = $('<li/>')
-    .attr('data-identity', member.identity);
+    .attr('data-identity', member.userInfo.identity);
 
   var $img = $('<img/>')
     .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity.toLowerCase()) + '?s=20&d=mm&r=g')
     .appendTo($el);
 
+
+  let hasReachability = (member.userInfo.online !== null) && (typeof member.userInfo.online !== 'undefined');
   var $span = $('<span/>')
-    .text(member.identity)
+    .text(member.userInfo.friendlyName || member.userInfo.identity)
+    .addClass(hasReachability ? ( member.userInfo.online ? 'member-online' : 'member-offline' ) : '')
     .appendTo($el);
 
   var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
@@ -428,9 +476,10 @@ function updateMembers() {
     members.push(member);
   });
 
-  members.sort(function(a, b) {
-    return a.identity > b.identity;
-  }).forEach(addMember);
+  members
+    .sort(function(a, b) { return a.identity > b.identity; })
+    .sort(function(a, b) { return a.userInfo.online < b.userInfo.online; })
+    .forEach(addMember);
 }
 
 function updateChannels() {
@@ -471,7 +520,7 @@ function updateMember(member) {
   if (!$lastRead.length) {
     $lastRead = $('<img/>')
       .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity) + '?s=20&d=mm&r=g')
-      .attr('title', member.identity)
+      .attr('title', member.userInfo.friendlyName || member.userInfo.identity)
       .attr('data-identity', member.identity);
   }
 
@@ -489,7 +538,7 @@ function setActiveChannel(channel) {
     activeChannel.removeListener('updated', updateActiveChannel);
     activeChannel.removeListener('memberUpdated', updateMember);
   }
-  
+
   activeChannel = channel;
 
   $('#channel-title').text(channel.friendlyName);
@@ -521,8 +570,9 @@ function setActiveChannel(channel) {
     $('#channel').removeClass('view-only');
   }
 
-  channel.getMessages(99999).then(function(messages) {
-    messages.forEach(addMessage);
+  channel.getMessagesPaged(30).then(function(page) {
+    activeChannelPage = page;
+    page.items.forEach(addMessage);
 
     channel.on('messageAdded', addMessage);
     channel.on('messageUpdated', updateMessage);
@@ -549,15 +599,22 @@ function setActiveChannel(channel) {
     channel.on('memberJoined', updateMembers);
     channel.on('memberLeft', updateMembers);
     channel.on('memberUpdated', updateMember);
+
+    members.forEach(member => {
+      member.userInfo.on('updated', () => {
+        updateMember.bind(null, member);
+        updateMembers();
+      });
+    });
   });
 
   channel.on('typingStarted', function(member) {
-    typingMembers.add(member.identity);
+    typingMembers.add(member.userInfo.friendlyName || member.userInfo.identity);
     updateTypingIndicator();
   });
 
   channel.on('typingEnded', function(member) {
-    typingMembers.delete(member.identity);
+    typingMembers.delete(member.userInfo.friendlyName || member.userInfo.identity);
     updateTypingIndicator();
   });
 
@@ -591,7 +648,6 @@ function updateTypingIndicator() {
   } else {
     message = '';
   }
-
   $('#typing-indicator span').text(message);
 }
 

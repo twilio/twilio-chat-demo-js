@@ -372,6 +372,7 @@ div.edit-button {
   top: 0;
   bottom: 0;
   right: 200px;
+  overflow: hidden;
 }
 
 #channel-messages {
@@ -381,6 +382,7 @@ div.edit-button {
   height: calc(100% - 70px);
   overflow-y: auto;
 }
+
 
 #channel-messages ul {
   list-style-type: none;
@@ -623,5 +625,21 @@ div.edit-button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+#channel-members .member-online {
+  font-weight: bold;
+}
+
+#channel-members .member-offline {
+  color: gray;
+}
+
+.loader {
+    -webkit-filter: grayscale(100%) blur(2px);
+   -moz-filter: grayscale(100%) blur(2px);
+     -o-filter: grayscale(100%) blur(2px);
+    -ms-filter: grayscale(100%) blur(2px);
+        filter: grayscale(100%) blur(2px);
 }
 
