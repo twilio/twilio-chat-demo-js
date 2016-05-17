@@ -188,25 +188,7 @@ function logIn(identity, displayName) {
       $('#login').hide();
       $('#overlay').hide();
 
-      let options = {
-        IPMessaging: { typingUri: 'https://aim.dev-us1.twilio.com' },
-        DataSync: { cdsUri: 'https://cds.dev-us1.twilio.com' },
-        Notification: { ersUri: 'https://ers.dev-us1.twilio.com' },
-        Twilsock: { uri: 'wss://tsock.dev-us1.twilio.com' },
-        logLevel: 'debug'
-      };
-
-      /*
-      let options = {
-        IPMessaging: { typingUri: 'https://aim.stage-us1.twilio.com' },
-        DataSync: { cdsUri: 'https://cds.stage-us1.twilio.com' },
-        Notification: { ersUri: 'https://ers.stage-us1.twilio.com' },
-        Twilsock: { uri: 'wss://tsock.stage-us1.twilio.com' }
-      };
-      */
-
-      // var options = { logLevel: 'debug' };
-
+      var options = { logLevel: 'debug' };
       var accessManager = new Twilio.AccessManager(token);
       client = new Twilio.IPMessaging.Client(accessManager, options);
 
