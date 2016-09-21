@@ -8,12 +8,16 @@ var typingMembers = new Set();
 
 var activeChannelPage;
 
+var userContext = { identity: null, endpoint: null };
+
 $(document).ready(function() {
   $('#login-name').focus();
 
   $('#login-button').on('click', function() {
     var identity = $('#login-name').val();
     if (!identity) { return; }
+
+    userContext.identity = identity;
 
     logIn(identity, identity);
   });
@@ -39,15 +43,17 @@ $(document).ready(function() {
   var isUpdatingConsumption = false;
   $('#channel-messages').on('scroll', function(e) {
     var $messages = $('#channel-messages');
+
     if ($('#channel-messages ul').height() - 50 < $messages.scrollTop() + $messages.height()) {
-      var newestMessageIndex = activeChannel.messages.length ?
-        activeChannel.messages[activeChannel.messages.length-1].index : 0;
-      if (!isUpdatingConsumption && activeChannel.lastConsumedMessageIndex !== newestMessageIndex) {
-        isUpdatingConsumption = true;
-        activeChannel.updateLastConsumedMessageIndex(newestMessageIndex).then(function() {
-          isUpdatingConsumption = false;
-        });
-      }
+      activeChannel.getMessages(1).then(messages => {
+        var newestMessageIndex = messages.length ? messages[0].index : 0;
+        if (!isUpdatingConsumption && activeChannel.lastConsumedMessageIndex !== newestMessageIndex) {
+          isUpdatingConsumption = true;
+          activeChannel.updateLastConsumedMessageIndex(newestMessageIndex).then(function() {
+            isUpdatingConsumption = false;
+          });
+        }
+      });
     }
 
     var self = $(this);
@@ -185,12 +191,45 @@ function logIn(identity, displayName) {
 
       var token = res.text;
 
+      userContext.identity = identity;
+      userContext.endpoint = endpointId;
+
       $('#login').hide();
       $('#overlay').hide();
 
-      var options = { logLevel: 'debug' };
-      var accessManager = new Twilio.AccessManager(token);
-      client = new Twilio.IPMessaging.Client(accessManager, options);
+      // let options = { logLevel: 'debug' };
+      let options = {
+        IPMessaging: { typingUri: 'https://aim.dev-us1.twilio.com' },
+        DataSync: { cdsUri: 'https://cds.dev-us1.twilio.com' },
+        Notification: { ersUri: 'https://ers.dev-us1.twilio.com' },
+        Twilsock: { uri: 'wss://tsock.dev-us1.twilio.com' },
+        logLevel: 'debug'
+      };
+
+      /*
+      let options = {
+        IPMessaging: { typingUri: 'https://aim.stage-us1.twilio.com' },
+        DataSync: { cdsUri: 'https://cds.stage-us1.twilio.com' },
+        Notification: { ersUri: 'https://ers.stage-us1.twilio.com' },
+        Twilsock: { uri: 'wss://tsock.stage-us1.twilio.com' },
+        logLevel: 'debug'
+      };
+      */
+
+      accessManager = new Twilio.AccessManager(token);
+      accessManager.on('tokenExpired', () => {
+        request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
+          if (err) {
+            console.error('Failed to get a token ', res.text);
+            throw new Error(res.text);
+          }
+          console.log('Got new token!', res.text);
+          accessManager.updateToken(res.text);
+        });
+      })
+
+      client = new Twilio.IPMessaging.Client(token, options);
+      accessManager.on('tokenUpdated', am => client.updateToken(am.token));
 
       $('#profile label').text(client.userInfo.friendlyName || client.userInfo.identity);
       $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
@@ -199,10 +238,21 @@ function logIn(identity, displayName) {
         $('#profile label').text(client.userInfo.friendlyName || client.userInfo.identity);
       });
 
+      var connectionInfo = $('#profile #presence');
+      connectionInfo
+        .removeClass('online offline connecting denied')
+        .addClass(client.connectionState);
+      client.on('connectionStateChanged', function(state) {
+        connectionInfo
+          .removeClass('online offline connecting denied')
+          .addClass(client.connectionState);
+      });
+
       client.getChannels().then(updateChannels);
 
       client.on('channelJoined', function(channel) {
         channel.on('messageAdded', updateUnreadMessages);
+        channel.on('messageAdded', updateChannels);
         updateChannels();
       });
 
@@ -277,10 +327,17 @@ function addJoinedChannel(channel) {
     .text(channel.friendlyName)
     .appendTo($el);
 
-  if (channel.messages.length &&
-    channel.lastConsumedMessageIndex !== channel.messages[channel.messages.length-1].index) {
-    $title.addClass('new-messages');
-  }
+  var $count = $('<span class="messages-count"/>')
+    .appendTo($el);
+
+  /*
+  channel.getUnreadMessagesCount().then(count => {
+    if (count > 0) {
+      $el.addClass('new-messages');
+      $count.text(count);
+    }
+  });
+  */
 
   var $leave = $('<div class="remove-button glyphicon glyphicon-remove"/>')
     .on('click', function(e) {
@@ -418,12 +475,6 @@ function addMessage(message) {
       message.index > message.channel.lastConsumedMessageIndex) {
     message.channel.updateLastConsumedMessageIndex(message.index);
   }
-
-  var newestMessageIndex = activeChannel.messages.length ?
-    activeChannel.messages[activeChannel.messages.length-1].index : 0;
-  if (message.index > newestMessageIndex) {
-    newestMessageIndex = message.index;
-  }
 }
 
 function addMember(member) {
@@ -452,16 +503,13 @@ function addMember(member) {
 
 function updateMembers() {
   $('#channel-members ul').empty();
-  var members = [];
 
-  activeChannel.members.forEach(function(member) {
-    members.push(member);
-  });
+  activeChannel.getMembers()
+    .then(members => members
+        .sort(function(a, b) { return a.identity > b.identity; })
+        .sort(function(a, b) { return a.userInfo.online < b.userInfo.online; })
+        .forEach(addMember));
 
-  members
-    .sort(function(a, b) { return a.identity > b.identity; })
-    .sort(function(a, b) { return a.userInfo.online < b.userInfo.online; })
-    .forEach(addMember);
 }
 
 function updateChannels() {
@@ -560,8 +608,7 @@ function setActiveChannel(channel) {
     channel.on('messageUpdated', updateMessage);
     channel.on('messageRemoved', removeMessage);
 
-    var newestMessageIndex = activeChannel.messages.length ?
-      activeChannel.messages[activeChannel.messages.length-1].index : 0;
+    var newestMessageIndex = page.items.length ? page.items[page.items.length - 1].index : 0;
     var lastIndex = channel.lastConsumedMessageIndex;
     if (lastIndex && lastIndex !== newestMessageIndex) {
       var $li = $('li[data-index='+ lastIndex + ']');
@@ -631,5 +678,18 @@ function updateTypingIndicator() {
     message = '';
   }
   $('#typing-indicator span').text(message);
+}
+
+function updateWithIncorrectToken() {
+  let identity = userContext.identity;
+  let randomEndpointId = Math.random().toString(36).substring(7);
+  request('/getToken?identity=' + identity + '&endpointId=' + randomEndpointId, function(err, res) {
+    if (err) {
+      console.error('Failed to get a token ', res.text);
+      throw new Error(res.text);
+    }
+    console.log('Got new token!', res.text);
+    accessManager.updateToken(res.text);
+  });
 }
 
