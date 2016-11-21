@@ -197,26 +197,10 @@ function logIn(identity, displayName) {
       $('#login').hide();
       $('#overlay').hide();
 
-      // let options = { logLevel: 'debug' };
-      let options = {
-        IPMessaging: { typingUri: 'https://aim.dev-us1.twilio.com' },
-        DataSync: { cdsUri: 'https://cds.dev-us1.twilio.com' },
-        Notification: { ersUri: 'https://ers.dev-us1.twilio.com' },
-        Twilsock: { uri: 'wss://tsock.dev-us1.twilio.com' },
-        logLevel: 'debug'
-      };
-
-      /*
-      let options = {
-        IPMessaging: { typingUri: 'https://aim.stage-us1.twilio.com' },
-        DataSync: { cdsUri: 'https://cds.stage-us1.twilio.com' },
-        Notification: { ersUri: 'https://ers.stage-us1.twilio.com' },
-        Twilsock: { uri: 'wss://tsock.stage-us1.twilio.com' },
-        logLevel: 'debug'
-      };
-      */
+      client = new Twilio.Chat.Client(token, { logLevel: 'debug' });
 
       accessManager = new Twilio.AccessManager(token);
+      accessManager.on('tokenUpdated', am => client.updateToken(am.token));
       accessManager.on('tokenExpired', () => {
         request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
           if (err) {
@@ -227,9 +211,6 @@ function logIn(identity, displayName) {
           accessManager.updateToken(res.text);
         });
       })
-
-      client = new Twilio.IPMessaging.Client(token, options);
-      accessManager.on('tokenUpdated', am => client.updateToken(am.token));
 
       $('#profile label').text(client.userInfo.friendlyName || client.userInfo.identity);
       $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
@@ -248,7 +229,7 @@ function logIn(identity, displayName) {
           .addClass(client.connectionState);
       });
 
-      client.getChannels().then(updateChannels);
+      client.getUserChannels().then(updateChannels);
 
       client.on('channelJoined', function(channel) {
         channel.on('messageAdded', updateUnreadMessages);
@@ -358,7 +339,7 @@ function removeLeftChannel(channel) {
 
 function updateMessages() {
   $('#channel-messages ul').empty();
-  activeChannel.getMessagesPaged(30).then(function(page) {
+  activeChannel.getMessages(30).then(function(page) {
     page.items.forEach(addMessage);
   });
 }
@@ -517,29 +498,26 @@ function updateChannels() {
   $('#invited-channels ul').empty();
   $('#my-channels ul').empty();
 
-  var channels = [];
+  client.getUserChannels()
+    .then(page => {
+        channels = page.items.sort(function(a, b) {
+          return a.friendlyName > b.friendlyName;
+        });
 
-  client.channels.forEach(function(channel) {
-    channels.push(channel);
-  });
-
-  channels = channels.sort(function(a, b) {
-    return a.friendlyName > b.friendlyName;
-  });
-
-  channels.forEach(function(channel) {
-    switch (channel.status) {
-      case 'joined':
-        addJoinedChannel(channel);
-        break;
-      case 'invited':
-        addInvitedChannel(channel);
-        break;
-      default:
-        addKnownChannel(channel);
-        break;
-    }
-  });
+        channels.forEach(function(channel) {
+          switch (channel.status) {
+            case 'joined':
+              addJoinedChannel(channel);
+              break;
+            case 'invited':
+              addInvitedChannel(channel);
+              break;
+            default:
+              addKnownChannel(channel);
+              break;
+          }
+        });
+    })
 }
 
 function updateMember(member) {
@@ -600,7 +578,7 @@ function setActiveChannel(channel) {
     $('#channel').removeClass('view-only');
   }
 
-  channel.getMessagesPaged(30).then(function(page) {
+  channel.getMessages(30).then(function(page) {
     activeChannelPage = page;
     page.items.forEach(addMessage);
 
