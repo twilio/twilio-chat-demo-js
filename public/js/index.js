@@ -212,11 +212,11 @@ function logIn(identity, displayName) {
         });
       })
 
-      $('#profile label').text(client.userInfo.friendlyName || client.userInfo.identity);
+      $('#profile label').text(client.user.friendlyName || client.user.identity);
       $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
 
-      client.userInfo.on('updated', function() {
-        $('#profile label').text(client.userInfo.friendlyName || client.userInfo.identity);
+      client.user.on('updated', function() {
+        $('#profile label').text(client.user.friendlyName || client.user.identity);
       });
 
       var connectionInfo = $('#profile #presence');
@@ -229,7 +229,7 @@ function logIn(identity, displayName) {
           .addClass(client.connectionState);
       });
 
-      client.getUserChannels().then(updateChannels);
+      client.getSubscribedChannels().then(updateChannels);
 
       client.on('channelJoined', function(channel) {
         channel.on('messageAdded', updateUnreadMessages);
@@ -275,6 +275,26 @@ function addKnownChannel(channel) {
     .appendTo($el);
 
   $('#known-channels ul').append($el);
+}
+
+function addPublicChannel(channel) {
+  var $el = $('<li/>')
+    .attr('data-sid', channel.sid)
+    .attr('id', channel.sid)
+    .on('click', function() {
+      channel.getChannel().then(channel => {
+        channel.join().then(channel => {
+          setActiveChannel(channel);
+          removePublicChannel(channel);
+        });
+      });
+    });
+
+  var $title = $('<span/>')
+    .text(channel.friendlyName)
+    .appendTo($el);
+
+  $('#public-channels ul').append($el);
 }
 
 function addInvitedChannel(channel) {
@@ -335,6 +355,10 @@ function removeLeftChannel(channel) {
   if (channel === activeChannel) {
     clearActiveChannel();
   }
+}
+
+function removePublicChannel(channel) {
+  $('#public-channels li[data-sid=' + channel.sid + ']').remove();
 }
 
 function updateMessages() {
@@ -459,27 +483,29 @@ function addMessage(message) {
 }
 
 function addMember(member) {
-  var $el = $('<li/>')
-    .attr('data-identity', member.userInfo.identity);
+  member.getUser().then(user => {
+    var $el = $('<li/>')
+      .attr('data-identity', member.identity);
 
-  var $img = $('<img/>')
-    .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity.toLowerCase()) + '?s=20&d=mm&r=g')
-    .appendTo($el);
+    var $img = $('<img/>')
+      .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity.toLowerCase()) + '?s=20&d=mm&r=g')
+      .appendTo($el);
 
 
-  let hasReachability = (member.userInfo.online !== null) && (typeof member.userInfo.online !== 'undefined');
-  var $span = $('<span/>')
-    .text(member.userInfo.friendlyName || member.userInfo.identity)
-    .addClass(hasReachability ? ( member.userInfo.online ? 'member-online' : 'member-offline' ) : '')
-    .appendTo($el);
+    let hasReachability = (user.online !== null) && (typeof user.online !== 'undefined');
+    var $span = $('<span/>')
+      .text(user.friendlyName || user.identity)
+      .addClass(hasReachability ? ( user.online ? 'member-online' : 'member-offline' ) : '')
+      .appendTo($el);
 
-  var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
-    .on('click', member.remove.bind(member))
-    .appendTo($el);
+    var $remove = $('<div class="remove-button glyphicon glyphicon-remove"/>')
+      .on('click', member.remove.bind(member))
+      .appendTo($el);
 
-  updateMember(member);
+    updateMember(member, user);
 
-  $('#channel-members ul').append($el);
+    $('#channel-members ul').append($el);
+  });
 }
 
 function updateMembers() {
@@ -488,23 +514,21 @@ function updateMembers() {
   activeChannel.getMembers()
     .then(members => members
         .sort(function(a, b) { return a.identity > b.identity; })
-        .sort(function(a, b) { return a.userInfo.online < b.userInfo.online; })
+        .sort(function(a, b) { return a.getUser().then(user => user.online) < b.getUser().then(user => user.online); })
         .forEach(addMember));
 
 }
 
 function updateChannels() {
-  $('#known-channels ul').empty();
-  $('#invited-channels ul').empty();
-  $('#my-channels ul').empty();
-
-  client.getUserChannels()
+  client.getSubscribedChannels()
     .then(page => {
-        channels = page.items.sort(function(a, b) {
+        subscribedChannels = page.items.sort(function(a, b) {
           return a.friendlyName > b.friendlyName;
         });
-
-        channels.forEach(function(channel) {
+        $('#known-channels ul').empty();
+        $('#invited-channels ul').empty();
+        $('#my-channels ul').empty()
+        subscribedChannels.forEach(function(channel) {
           switch (channel.status) {
             case 'joined':
               addJoinedChannel(channel);
@@ -517,10 +541,25 @@ function updateChannels() {
               break;
           }
         });
-    })
+        client.getPublicChannelDescriptors()
+          .then(page => {
+              publicChannels = page.items.sort(function(a, b) {
+                return a.friendlyName > b.friendlyName;
+              });
+              $('#public-channels ul').empty();
+              publicChannels.forEach(function(channel) {
+                var result = subscribedChannels.find(item => item.sid === channel.sid);
+                console.log('Adding public channel ' + channel.sid + ' ' + channel.status + ', result=' + result);
+                if (result === undefined) {
+                  addPublicChannel(channel);
+                }
+              });
+          });
+    });
 }
 
-function updateMember(member) {
+function updateMember(member, user) {
+  if (user === undefined) { return; }
   if (member.identity === decodeURIComponent(client.identity)) { return; }
 
   var $lastRead = $('#channel-messages p.members-read img[data-identity="' + member.identity + '"]');
@@ -528,7 +567,7 @@ function updateMember(member) {
   if (!$lastRead.length) {
     $lastRead = $('<img/>')
       .attr('src', 'http://gravatar.com/avatar/' + MD5(member.identity) + '?s=20&d=mm&r=g')
-      .attr('title', member.userInfo.friendlyName || member.userInfo.identity)
+      .attr('title', user.friendlyName || member.identity)
       .attr('data-identity', member.identity);
   }
 
@@ -608,21 +647,27 @@ function setActiveChannel(channel) {
     channel.on('memberUpdated', updateMember);
 
     members.forEach(member => {
-      member.userInfo.on('updated', () => {
-        updateMember.bind(null, member);
-        updateMembers();
+      member.getUser().then(user => {
+        user.on('updated', () => {
+          updateMember.bind(null, member, user);
+          updateMembers();
+        });
       });
     });
   });
 
   channel.on('typingStarted', function(member) {
-    typingMembers.add(member.userInfo.friendlyName || member.userInfo.identity);
-    updateTypingIndicator();
+    member.getUser().then(user => {
+      typingMembers.add(user.friendlyName || member.identity);
+      updateTypingIndicator();
+    });
   });
 
   channel.on('typingEnded', function(member) {
-    typingMembers.delete(member.userInfo.friendlyName || member.userInfo.identity);
-    updateTypingIndicator();
+    member.getUser().then(user => {
+      typingMembers.delete(user.friendlyName || member.identity);
+      updateTypingIndicator();
+    });
   });
 
   $('#message-body-input').focus();
