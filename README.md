@@ -8,6 +8,15 @@ twilio-chat-demo-js
 1. Copy `credentials.example.json` to `credentials.json`
 2. Plug your credentials into `credentials.json`
 
+You can find the following credentials in your Twilio Console:
+
+| Config Value  | Description |
+| :-------------  |:------------- |
+`accountSid` | Your primary Twilio account identifier - find this [in the console here](https://www.twilio.com/console).
+`signingKeySid` | The SID for your API Key, used to authenticate - [generate one here](https://www.twilio.com/console/runtime/api-keys).
+`signingKeySecret` | The secret for your API Key, used to authenticate - [you'll get this when you create your API key, as above](https://www.twilio.com/console/runtime/api-keys).
+`serviceSid` | Like a database for your Chat data - [generate one in the console here](https://www.twilio.com/console/chat/services).
+
 ##### Install dependencies
 
 ```
