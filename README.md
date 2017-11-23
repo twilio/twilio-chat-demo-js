@@ -16,6 +16,7 @@ You can find the following credentials in your Twilio Console:
 `signingKeySid` | The SID for your API Key, used to authenticate - [generate one here](https://www.twilio.com/console/runtime/api-keys).
 `signingKeySecret` | The secret for your API Key, used to authenticate - [you'll get this when you create your API key, as above](https://www.twilio.com/console/runtime/api-keys).
 `serviceSid` | Like a database for your Chat data - [generate one in the console here](https://www.twilio.com/console/chat/services).
+`pushCredentialSid` | Credentials are records for push notification channels for APN and FCM - [generate them in the console here](https://www.twilio.com/console/chat/credentials) and [read more about configuring push here](https://www.twilio.com/docs/api/chat/guides/push-notification-configuration).
 
 ##### Install dependencies
 
