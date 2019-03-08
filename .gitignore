@@ -1,3 +1,5 @@
+.idea
 credentials.json
 *.swp
 node_modules
+package-lock.json

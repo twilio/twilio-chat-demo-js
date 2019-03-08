@@ -1,14 +1,12 @@
-var fingerprint = new Fingerprint2();
 var request = window.superagent;
 
-var accessManager;
 var activeChannel;
 var client;
 var typingMembers = new Set();
 
 var activeChannelPage;
 
-var userContext = { identity: null, endpoint: null };
+var userContext = { identity: null};
 
 $(document).ready(function() {
   $('#login-name').focus();
@@ -185,64 +183,63 @@ function googleLogIn(googleUser) {
 }
 
 function logIn(identity, displayName) {
-  fingerprint.get(function(endpointId) {
-    request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
-      if (err) { throw new Error(res.text); }
+  request('/getToken?identity=' + identity, function(err, res) {
+    if (err) { throw new Error(res.text); }
 
-      var token = res.text;
+    var token = res.text;
 
-      userContext.identity = identity;
-      userContext.endpoint = endpointId;
+    userContext.identity = identity;
 
-      $('#login').hide();
-      $('#overlay').hide();
-
-      client = new Twilio.Chat.Client(token, { logLevel: 'debug' });
-
-      accessManager = new Twilio.AccessManager(token);
-      accessManager.on('tokenUpdated', am => client.updateToken(am.token));
-      accessManager.on('tokenExpired', () => {
-        request('/getToken?identity=' + identity + '&endpointId=' + endpointId, function(err, res) {
-          if (err) {
-            console.error('Failed to get a token ', res.text);
-            throw new Error(res.text);
-          }
-          console.log('Got new token!', res.text);
-          accessManager.updateToken(res.text);
+    Twilio.Chat.Client.create(token, { logLevel: 'info' })
+      .then(function(createdClient) {
+        $('#login').hide();
+        $('#overlay').hide();
+        client = createdClient;
+        client.on('tokenAboutToExpire', () => {
+          request('/getToken?identity=' + identity, function(err, res) {
+            if (err) {
+              console.error('Failed to get a token ', res.text);
+              throw new Error(res.text);
+            }
+            console.log('Got new token!', res.text);
+            client.updateToken(res.text);
+          });
         });
-      })
 
-      $('#profile label').text(client.user.friendlyName || client.user.identity);
-      $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
-
-      client.user.on('updated', function() {
         $('#profile label').text(client.user.friendlyName || client.user.identity);
-      });
+        $('#profile img').attr('src', 'http://gravatar.com/avatar/' + MD5(identity) + '?s=40&d=mm&r=g');
 
-      var connectionInfo = $('#profile #presence');
-      connectionInfo
-        .removeClass('online offline connecting denied')
-        .addClass(client.connectionState);
-      client.on('connectionStateChanged', function(state) {
+        client.user.on('updated', function() {
+          $('#profile label').text(client.user.friendlyName || client.user.identity);
+        });
+
+        var connectionInfo = $('#profile #presence');
         connectionInfo
           .removeClass('online offline connecting denied')
           .addClass(client.connectionState);
-      });
+        client.on('connectionStateChanged', function(state) {
+          connectionInfo
+            .removeClass('online offline connecting denied')
+            .addClass(client.connectionState);
+        });
 
-      client.getSubscribedChannels().then(updateChannels);
+        client.getSubscribedChannels().then(updateChannels);
 
-      client.on('channelJoined', function(channel) {
-        channel.on('messageAdded', updateUnreadMessages);
-        channel.on('messageAdded', updateChannels);
-        updateChannels();
-      });
+        client.on('channelJoined', function(channel) {
+          channel.on('messageAdded', updateUnreadMessages);
+          channel.on('messageAdded', updateChannels);
+          updateChannels();
+        });
 
-      client.on('channelInvited', updateChannels);
-      client.on('channelAdded', updateChannels);
-      client.on('channelUpdated', updateChannels);
-      client.on('channelLeft', leaveChannel);
-      client.on('channelRemoved', leaveChannel);
-    });
+        client.on('channelInvited', updateChannels);
+        client.on('channelAdded', updateChannels);
+        client.on('channelUpdated', updateChannels);
+        client.on('channelLeft', leaveChannel);
+        client.on('channelRemoved', leaveChannel);
+      })
+      .catch(function(err) {
+        throw err;
+      })
   });
 }
 
@@ -372,10 +369,10 @@ function removeMessage(message) {
   $('#channel-messages li[data-index=' + message.index + ']').remove();
 }
 
-function updateMessage(message) {
-  var $el = $('#channel-messages li[data-index=' + message.index + ']');
+function updateMessage(args) {
+  var $el = $('#channel-messages li[data-index=' + args.message.index + ']');
   $el.empty();
-  createMessage(message, $el);
+  createMessage(args.message, $el);
 }
 
 function createMessage(message, $el) {
@@ -701,18 +698,5 @@ function updateTypingIndicator() {
     message = '';
   }
   $('#typing-indicator span').text(message);
-}
-
-function updateWithIncorrectToken() {
-  let identity = userContext.identity;
-  let randomEndpointId = Math.random().toString(36).substring(7);
-  request('/getToken?identity=' + identity + '&endpointId=' + randomEndpointId, function(err, res) {
-    if (err) {
-      console.error('Failed to get a token ', res.text);
-      throw new Error(res.text);
-    }
-    console.log('Got new token!', res.text);
-    accessManager.updateToken(res.text);
-  });
 }
 
