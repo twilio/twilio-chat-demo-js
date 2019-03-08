@@ -38,8 +38,8 @@ Connect via `http://localhost:8080`
 
 This demo defaults to using the latest build of the Chat JS SDK.
 To change to a different version, just open `public/index.html` and change the
-following string to point to the URL of the version you'd like to use:
+following string to point to the URL of the version you'd like to use, for example to use v3.2.1:
 
 ```
-<script src="https://media.twiliocdn.com/sdk/js/chat/releases/0.11.1/twilio-chat.js"></script>
+<script src="https://media.twiliocdn.com/sdk/js/chat/releases/3.2.1/twilio-chat.min.js"></script>
 ```

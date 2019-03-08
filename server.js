@@ -15,13 +15,11 @@ if (credentials.instanceSid) {
 
 app.get('/getToken', function(req, res) {
   var identity = req.query && req.query.identity;
-  var endpointId = req.query && req.query.endpointId;
-
-  if (!identity || !endpointId) {
-    res.status(400).send('getToken requires both an Identity and an Endpoint ID');
+  if (!identity) {
+    res.status(400).send('getToken requires an Identity to be provided');
   }
 
-  var token = tokenProvider.getToken(identity, endpointId);
+  var token = tokenProvider.getToken(identity);
   res.send(token);
 });
 
