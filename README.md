@@ -1,5 +1,7 @@
-twilio-chat-demo-js
+Deprecated
 ======================
+
+Please use the new [conversations-demo-react](https://github.com/twilio/twilio-conversations-demo-react).
 
 ### Running the demo
 
